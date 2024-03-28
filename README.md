@@ -3,6 +3,8 @@
 
 ## ABSTRACT
 
+What maintains trait divergence in the face of gene flow? Two subspecies characterized by flower color in wild Antirrhinum majus L. (snapdragon) readily form hybrid zones where they meet. The sharp clines indicate strong selection on flower color, but the causal agents of selection are unknown. Because flower pigmentation is often implicated in abiotic stress tolerance, we experimentally compared drought tolerance of each subspecies and F1 hybrids from allopatric crosses. In benign conditions, all plants survived, and hybrids tended to be taller than parental phenotypes. However, hybrids had lower survival under drought stress than either parent. We hypothesize that survival probability is directly related to flower color genes, as hybrids that flowered were less likely to survive. Thus, reduced hybrid fitness due to maladaptation to abiotic stress may contribute to maintaining flower color divergence in the face of gene flow in A. majus.
+
 ## Repository description
 
 FOLDERS:
