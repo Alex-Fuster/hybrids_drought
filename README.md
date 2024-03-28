@@ -59,7 +59,11 @@ FOLDERS:
 - pop_P: whether any parent belongs to population O.
 - pop_L: whether any parent belongs to population L.
 - initial_h: height when transplanted into greenhouse pots.
-    
-  [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10892525.svg)](https://doi.org/10.5281/zenodo.10892525)
+
 
 For any inquiries, please reach out to alexfuster7@gmail.com or cbaskett3@gatech.edu
+
+
+
+
+  [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10892525.svg)](https://doi.org/10.5281/zenodo.10892525)
