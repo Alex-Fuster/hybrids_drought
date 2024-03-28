@@ -9,7 +9,7 @@ What maintains trait divergence in the face of gene flow? Two subspecies charact
 
 FOLDERS:
 
-- **'data/'** contains the raw data used for the analyses
+- **`data/`** contains the raw data used for the analyses
 - **figures** figures of the manuscript produced in the code 
 - **tables** tables of the manuscript produced in the code
 - **scripts**:
