@@ -1,0 +1,271 @@
+late_block;unique_id;late_trt
+1;4;early drought
+1;9;early drought
+1;38;early drought
+1;40;early drought
+1;41;early drought
+1;43;early drought
+1;44;early drought
+1;51;early drought
+1;53;early drought
+1;56;early drought
+1;59;early drought
+1;60;early drought
+1;62;early drought
+1;63;early drought
+1;67;early drought
+2;7;late drought
+2;13;late drought
+2;52;late drought
+2;73;late drought
+2;75;late drought
+2;81;late drought
+2;86;late drought
+2;87;late drought
+2;91;late drought
+2;95;late drought
+2;96;late drought
+2;103;late drought
+2;106;late drought
+2;112;late drought
+2;113;late drought
+3;27;water
+3;29;water
+3;34;water
+3;37;water
+3;45;water
+3;58;water
+3;65;water
+3;72;water
+3;90;water
+3;130;water
+3;131;water
+3;150;water
+3;151;water
+3;162;water
+3;165;water
+4;71;early drought
+4;77;early drought
+4;82;early drought
+4;88;early drought
+4;89;early drought
+4;100;early drought
+4;102;early drought
+4;110;early drought
+4;114;early drought
+4;129;early drought
+4;135;early drought
+4;139;early drought
+4;160;early drought
+4;163;early drought
+4;171;early drought
+5;120;late drought
+5;133;late drought
+5;142;late drought
+5;143;late drought
+5;149;late drought
+5;159;late drought
+5;170;late drought
+5;174;late drought
+5;191;late drought
+5;193;late drought
+5;195;late drought
+5;197;late drought
+5;199;late drought
+5;204;late drought
+5;205;late drought
+6;168;water
+6;179;water
+6;181;water
+6;192;water
+6;194;water
+6;196;water
+6;202;water
+6;213;water
+6;214;water
+6;216;water
+6;218;water
+6;222;water
+6;226;water
+6;229;water
+6;232;water
+7;172;early drought
+7;187;early drought
+7;188;early drought
+7;208;early drought
+7;224;early drought
+7;227;early drought
+7;231;early drought
+7;233;early drought
+7;238;early drought
+7;245;early drought
+7;268;early drought
+7;269;early drought
+7;271;early drought
+7;279;early drought
+7;288;early drought
+8;207;late drought
+8;219;late drought
+8;228;late drought
+8;241;late drought
+8;246;late drought
+8;247;late drought
+8;249;late drought
+8;260;late drought
+8;261;late drought
+8;262;late drought
+8;263;late drought
+8;277;late drought
+8;278;late drought
+8;289;late drought
+8;294;late drought
+9;234;water
+9;236;water
+9;242;water
+9;243;water
+9;251;water
+9;252;water
+9;256;water
+9;257;water
+9;259;water
+9;273;water
+9;275;water
+9;282;water
+9;300;water
+9;305;water
+9;309;water
+10;291;early drought
+10;295;early drought
+10;296;early drought
+10;298;early drought
+10;307;early drought
+10;317;early drought
+10;325;early drought
+10;333;early drought
+10;363;early drought
+10;377;early drought
+10;398;early drought
+10;402;early drought
+10;403;early drought
+10;404;early drought
+10;408;early drought
+11;297;late drought
+11;306;late drought
+11;310;late drought
+11;313;late drought
+11;316;late drought
+11;318;late drought
+11;319;late drought
+11;326;late drought
+11;328;late drought
+11;335;late drought
+11;350;late drought
+11;353;late drought
+11;365;late drought
+11;367;late drought
+11;368;late drought
+12;311;water
+12;312;water
+12;321;water
+12;322;water
+12;323;water
+12;329;water
+12;332;water
+12;339;water
+12;342;water
+12;348;water
+12;352;water
+12;357;water
+12;369;water
+12;371;water
+12;380;water
+13;424;early drought
+13;426;early drought
+13;428;early drought
+13;435;early drought
+13;447;early drought
+13;458;early drought
+13;460;early drought
+13;461;early drought
+13;468;early drought
+13;469;early drought
+13;478;early drought
+13;482;early drought
+13;489;early drought
+13;499;early drought
+13;500;early drought
+14;376;late drought
+14;378;late drought
+14;382;late drought
+14;390;late drought
+14;410;late drought
+14;431;late drought
+14;437;late drought
+14;440;late drought
+14;455;late drought
+14;456;late drought
+14;459;late drought
+14;466;late drought
+14;476;late drought
+14;487;late drought
+14;491;late drought
+15;386;water
+15;392;water
+15;396;water
+15;401;water
+15;406;water
+15;407;water
+15;418;water
+15;432;water
+15;439;water
+15;445;water
+15;451;water
+15;453;water
+15;454;water
+15;471;water
+15;472;water
+16;504;early drought
+16;506;early drought
+16;510;early drought
+16;512;early drought
+16;516;early drought
+16;520;early drought
+16;531;early drought
+16;540;early drought
+16;546;early drought
+16;551;early drought
+16;557;early drought
+16;558;early drought
+16;564;early drought
+16;572;early drought
+16;602;early drought
+17;496;late drought
+17;498;late drought
+17;511;late drought
+17;515;late drought
+17;527;late drought
+17;536;late drought
+17;538;late drought
+17;539;late drought
+17;562;late drought
+17;566;late drought
+17;570;late drought
+17;605;late drought
+17;606;late drought
+17;609;late drought
+17;612;late drought
+18;484;water
+18;497;water
+18;502;water
+18;505;water
+18;507;water
+18;509;water
+18;534;water
+18;542;water
+18;544;water
+18;548;water
+18;565;water
+18;601;water
+18;603;water
+18;607;water
+18;608;water

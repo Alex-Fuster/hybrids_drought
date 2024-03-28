@@ -1,0 +1,9 @@
+"Table SX. Survival counts, death risk, and two proportions Z-tests for flowering and non-flowering plants in drought treatments.",,,,,,,,,,
+trt,colors,died_flowering,survived_flowering,died_non_flowering,survived_non_flowering,death_risk_flowering,death_risk_non_flowering,statistic,estimate,pvalue
+early drought,M_M,0,2,3,13,0.00,18.75,<0.001,"0 , 0.19",1
+early drought,M_Y,3,5,3,7,37.50,30.00,<0.001,"0.38 , 0.3",1
+early drought,Y_Y,1,2,4,11,33.33,26.67,<0.001,"0.33 , 0.27",1
+late drought,M_M,1,4,6,7,20.00,46.15,0.23016983,"0.2 , 0.46",0.63
+late drought,M_Y,12,0,3,3,100.00,50.00,4.05,"1 , 0.5",0.04
+late drought,Y_Y,1,5,3,9,16.67,25.00,<0.001,"0.17 , 0.25",1
+Death risk is calculated as: n died / (n died + n survived) * 100,,,,,,,,,,

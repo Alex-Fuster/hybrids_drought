@@ -1,0 +1,83 @@
+---
+title: "Create trait correlations plot"
+output: html_notebook
+---
+
+
+Load packages
+
+```{r}
+library(ggplot2)
+library(rgl)
+library(car)
+library(fmsb)
+library(hrbrthemes)
+library(GGally)
+library(viridis)
+library(extrafont)
+library(ggcorrplot)
+library(ggpubr)
+library(dplyr)
+```
+
+Parameters for plotting
+
+```{r}
+
+my.theme<-theme(axis.text=element_text(size=12),
+        axis.title = element_text(size = 14),
+        legend.text=element_text(size=10),
+        legend.title = element_text(size=12),
+        plot.title = element_text(face="bold",size=14,margin=margin(0,0,20,0),hjust = 0.5),
+        axis.title.y = element_text(margin = margin(t = 0, r = 15, b = 0, l = 0)),
+        axis.title.x = element_text(margin = margin(t = 15, r = 0, b = 0, l = 0)))
+
+pd = position_dodge(0.9)
+
+```
+
+
+Load data
+
+```{r}
+
+Dataset <- read.csv("../dataset.csv")
+
+
+Dataset <- Dataset %>% 
+  filter(w_b == "b") # choose only between populations crosses
+
+```
+
+
+
+## Correlation plot
+
+```{r}
+
+
+Dataset <- Dataset %>% 
+  rename(survival = survived,
+         time_to_flower = days_1flower)
+
+# Create correlation plot with pairwise complete observations
+ggpairs(Dataset, columns = c("survival", "flowering", "flower_count", "time_to_flower", "height_cm", "bushiness"),
+        aes(colour = colors, alpha = 0.3),
+        lower = 'blank', diag = 'blank',
+        upper = list(continuous = function(data, mapping, ...) {
+          ggally_cor(data, mapping = mapping, method = "pearson", ...)
+        })) +
+  scale_color_manual(
+    values = c("#990099", "#FF6666", "gold"),  
+    labels = c("pseudomajus", "F1 Hybrid", "striatum") 
+  ) +
+  scale_fill_manual(values = c("#990099", "#FF6666", "gold")) +
+  theme_classic() +
+  my.theme +
+  theme(axis.text = element_text(size = 7))
+
+
+#ggsave("../figures/corr.plot.png", height = 6, width = 9)
+
+
+```

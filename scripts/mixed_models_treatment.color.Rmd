@@ -1,0 +1,1680 @@
+---
+title: "Mixed models - flower color and treatmenr"
+output: html_notebook
+---
+
+This script conducts analyses to test the effect of treatment (control, early drought and late drought) and color or phenotype (A.m. pseudomajus, F1 hybrids, and A.m. striatum) on individual trait responses.
+
+
+
+Load packages
+
+```{r, results="hide", message=FALSE, waring = FALSE}
+
+
+## load required packages
+pkgs <- c("lme4", "arm", "multcomp", "nlme", 
+          "lsmeans", "tidyverse","nlme", "tidyverse", 
+          "ResourceSelection", "dplyr","effsize","hrbrthemes", 
+          "viridis", "plyr", "cowplot", "aods3", 
+          "AER", "pscl","DHARMa", "plotly", "ggpubr", 
+          "extrafont","car", "rcompanion", "agricolae",
+          "jtools", "sjPlot", "VGAM", "pracma", "rgl",
+          "MASS", "performance", 
+         # "brms", 
+          "sjstats", 
+          "sjmisc",
+         #"lmerTest",
+         #"rockchalk",
+          "emmeans", 
+         #"afex",
+         #"effects",
+         "forcats", 
+          "visreg", "rstatix", 
+         #"lmerTest",
+          #"ggstance", 
+         #"broomExtra",
+         "dplyr", "grid",
+         "glmmTMB",
+         "ggeffects",
+         "patchwork")
+
+
+lapply(pkgs, library, character.only = TRUE)
+
+rm(pkgs)
+```
+
+
+### Read data
+
+the dataset used for the analyses is computed in **"compute_df_analyses.Rmd"**.
+
+```{r}
+
+Dataset <- read.csv("../dataset.csv")
+
+# Filter to conduct analysis only for individuals resulted from between population crosses (discard within pop crosses)
+
+Dataset <- Dataset %>% 
+  filter(w_b == "b") 
+
+# Set random effects as factors
+
+Dataset$block <- as.factor(Dataset$block)
+Dataset$cross <- as.factor(Dataset$cross)
+
+Dataset$bushiness[Dataset$bushiness==0] <- NA
+
+head(Dataset)
+
+```
+
+Create a dataset excluding control to run the survival model:
+
+```{r}
+Dataset_nc<-subset(Dataset, Dataset$trt != "control") #Dataset used for the model with survival as response variable
+```
+
+
+## Fitted models
+
+
+```{r}
+
+glmer_surv_nc <- glmmTMB(survived~ trt + colors + trt:colors + (1|block) +(1|cross), family = "binomial", data = 
+                         Dataset_nc)
+
+glmer_f <- glmmTMB(flowering~trt + colors + trt:colors + (1|block) +(1|cross), family = "binomial", data = Dataset)
+
+glmer_nf_d <- glmmTMB(flower_count ~ trt + colors + trt:colors, data = Dataset, family = "nbinom2")
+
+
+lmer_height<-lmer(height_cm~trt + colors + trt:colors + (1|block) +(1|cross), Dataset, na.action=na.exclude)
+lmer_height.o<-lmer(height_cm~trt + colors + trt:colors + (1|block)+(1|cross), Dataset, na.action=na.omit) # This model only changes the na.action because packages used for diagnostics cant handle na.exclude() and some plotting functions handle na.omit() better. This does not affect any estimate and both models are equivalent as both na.exclude and na.omit remove the row where any of the dependent or independent variable is missing
+
+
+glmer_bush <- glmmTMB(bushiness~ trt + colors + trt:colors + (1|block)+(1|cross), data = Dataset, family = "poisson")
+
+
+glmer_tf <- glmmTMB(days_1flower~trt + colors + trt:colors + (1|block) +(1|cross), family = "nbinom2", data = Dataset)
+
+```
+
+
+## Model evaluations
+
+```{r}
+
+# Survival
+
+simulationOutput_surv_d<-simulateResiduals(glmer_surv_nc) 
+dharma_plot_surv<-plot(simulationOutput_surv_d)
+surv_dharma<-testResiduals(simulationOutput_surv_d)
+
+
+# Flowering
+
+simulationOutput_flow<-simulateResiduals(glmer_f) 
+dharma_plot_flow<-plot(simulationOutput_flow)
+flow_dharma<-testResiduals(simulationOutput_flow) 
+
+
+# flower_count
+
+
+simulationOutput_nflow<-simulateResiduals(glmer_nf_d) 
+dharma_plot_nflow<-plot(simulationOutput_nflow)
+
+
+
+# Height
+
+simulationOutput_height_d<-simulateResiduals(lmer_height.o)
+dharma_plot_height<-plot(simulationOutput_height_d)
+height_dharma<-testResiduals(simulationOutput_height_d)
+
+
+# Bushiness
+
+simulationOutput_bush_d<-simulateResiduals(glmer_bush)
+dharma_plot_bush<-plot(simulationOutput_bush_d)
+bush_dharma<-testResiduals(simulationOutput_bush_d) 
+
+
+# t flower
+
+simulationOutput_tflow_d<-simulateResiduals(glmer_tf)
+dharma_plot_tflow<-plot(simulationOutput_tflow_d)
+tflow_dharma<-testResiduals(simulationOutput_tflow_d)
+
+
+```
+
+
+
+## Summary Anova tables
+
+```{r}
+
+s_surv<-car::Anova(glmer_surv_nc,type="II")
+s_flow<-car::Anova(glmer_f,type="II")
+s_nflow<-car::Anova(glmer_nf_d,type="II")
+s_height<-car::Anova(lmer_height,type="III")
+s_bush<-car::Anova(glmer_bush,type="III")
+s_tflow<-car::Anova(glmer_tf,type="III")
+#s_iheight<-car::Anova(lm_iheight_col,type="III")
+
+options(scipen = 999)
+
+surv<-as.data.frame(s_surv)
+colnames(surv)[1] <- "Chisq"
+surv <- cbind(surv,rep("survival", nrow(surv)))
+colnames(surv)[ncol(surv)] = "trait"
+
+flow<-as.data.frame(s_flow)
+colnames(flow)[1] <- "Chisq"
+flow <- cbind(flow,rep("flowering", nrow(flow)))
+colnames(flow)[ncol(flow)] = "trait"
+
+
+nflow<-as.data.frame(s_nflow)
+nflow <- cbind(nflow,rep("n flowers", nrow(nflow)))
+colnames(nflow)[ncol(nflow)] = "trait"
+
+
+height<-as.data.frame(s_height)
+height <- cbind(height,rep("height", nrow(height)))
+colnames(height)[ncol(height)] = "trait"
+
+
+bush<-as.data.frame(s_bush)
+bush <- cbind(bush,rep("bushiness", nrow(bush)))
+colnames(bush)[ncol(bush)] = "trait"
+
+
+tflow<-as.data.frame(s_tflow)
+colnames(tflow)[1] <- "Chisq"
+tflow <- cbind(tflow,rep("time to flower", nrow(tflow)))
+colnames(tflow)[ncol(tflow)] = "trait"
+
+
+#iheight<-as.data.frame(s_iheight)
+
+df_anovas <- rbind(surv,
+      flow,
+      nflow,
+      tflow,
+      height,
+      bush)
+
+df_anovas$"Pr(>Chisq)"<- round(df_anovas$"Pr(>Chisq)", 4)
+df_anovas$"Chisq"<- round(df_anovas$"Chisq", 2)
+
+df_anovas
+
+#write.csv(df_anovas, "../tables/df_anovas_traits.csv")
+
+```
+
+
+
+
+
+## Group comparisons of predicted means & plotting
+
+
+Plotting settings
+
+```{r}
+
+my_theme<-theme(axis.text=element_text(size=12),
+        axis.title = element_text(size = 14),
+        legend.text=element_text(size=10),
+        legend.title = element_text(size=12),
+        plot.title = element_text(face="bold",size=14,margin=margin(0,0,20,0),hjust = 0.5),
+        axis.title.y = element_text(hjust = 0.5),
+        axis.title.x = element_text(hjust = 0.5))
+
+pd = position_dodge(0.9)
+alpha_raw_points = 0.15
+
+trt_order <- c("control", "early drought", "late drought")
+
+Dataset$trt <- factor(Dataset$trt,
+    levels = trt_order,ordered = TRUE)
+
+```
+
+
+
+
+### ----- Survival - all levels
+
+Compute emmeans and CI
+
+```{r}
+
+marginal_surv1.1 = emmeans(glmer_surv_nc,
+                   ~ colors:trt,  calc = c(n = ".wgt."))
+
+back.emmeans_surv<-confint(marginal_surv1.1, type = "response")
+
+```
+Add letter display from tukey tests
+
+```{r}
+
+
+surv_emmeans_cld <- multcomp::cld(object = marginal_surv1.1,
+                           Letters = letters)
+
+
+surv_emmeans_cld <- surv_emmeans_cld %>% 
+  arrange(colors) %>% 
+  select(trt, .group, colors)
+
+
+back.emmeans_surv <- left_join(back.emmeans_surv, surv_emmeans_cld, by = c("trt","colors"))
+
+back.emmeans_surv
+
+```
+
+
+
+```{r}
+
+
+Dataset_percentage <- aggregate(survived ~ trt + colors, data = Dataset, FUN = mean)
+
+Dataset_percentage$trt <- factor(Dataset_percentage$trt,
+   levels = trt_order,ordered = TRUE)
+
+
+
+# Plotting raw data points
+surv_raw <- ggdotchart(
+  Dataset_percentage, 
+  x = "trt", 
+  y = "survived",
+  color = "colors", 
+  palette = c("black", "black", "black"), 
+  alpha = 0.3,
+  size = 5, 
+  shape = 21,
+  #add = "segment", 
+  #add.params = list(color = "lightgray", size = 1.3),
+  position = position_dodge(0.6),
+  ggtheme = theme_classic(),
+  sorting = "none",
+  order = trt_order
+)
+
+# Overlay emmeans and CI on the raw data plot
+surv_overlay_plot <- surv_raw +
+  geom_errorbar(
+    data = back.emmeans_surv,
+    aes(
+      x = trt, #factor(trt, levels = trt_order), 
+      y = prob,  # Assuming prob is the probability in decimal form
+      ymin = asymp.LCL,
+      ymax = asymp.UCL,
+      color = colors
+    ),
+    position = position_dodge(width = 0.6),
+    width = 0.3,
+    size = 1
+  ) +
+  geom_point(
+    data = back.emmeans_surv,
+    aes(
+      x = trt, #factor(trt, levels = trt_order), 
+      y = prob,  # Assuming prob is the probability in decimal form
+      color = colors
+    ),
+    position = position_dodge(width = 0.6),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+  ) +
+ #geom_text(
+  #  data = back.emmeans_surv,
+  #  aes(
+  #    x = trt, # Adjust position based on factor levels,
+  #    color = colors,
+  #    y = asymp.UCL + 0.02,  # Adjust the position of the letters
+ #     label = .group  # Use the .group column for labels
+ #   ),
+ #   position = position_dodge(width = 0.6),
+ #   vjust = -0.5,  # Adjust vertical position
+ #   size = 4
+ # ) +
+  scale_fill_manual(values = c("#990099", "#FF6666", "gold")) +
+  scale_color_manual(
+    values = c("#990099", "#FF6666", "gold"),  # Remove black color
+    labels = c("pseudomajus", "F1 Hybrid", "striatum")  # Update labels
+  ) +
+  ylim(0,1.05)+
+  theme_classic() +
+  my_theme +
+  guides(fill = FALSE) +
+  #labs(color = "Phenotype") +
+  theme(legend.position = "none") +
+  xlab(NULL) +
+  ylab("survival probability") +
+  theme(axis.title.y = element_text(margin = margin(r = 10)))
+
+
+surv_overlay_plot
+
+
+
+
+
+```
+
+
+
+
+### ----- Survival - significant levels
+
+Compute emmeans and CI
+
+```{r}
+
+marginal_surv1.1 = emmeans(glmer_surv_nc,
+                   ~ colors,  calc = c(n = ".wgt."))
+
+back.emmeans_surv<-confint(marginal_surv1.1, type = "response")
+
+```
+Add letter display from tukey tests
+
+```{r}
+
+
+surv_emmeans_cld <- multcomp::cld(object = marginal_surv1.1,
+                           Letters = letters)
+
+
+surv_emmeans_cld <- surv_emmeans_cld %>% 
+  arrange(colors) %>% 
+  select(.group, colors)
+
+
+back.emmeans_surv <- left_join(back.emmeans_surv, surv_emmeans_cld, by = c("colors"))
+
+back.emmeans_surv
+
+```
+
+
+
+```{r}
+
+
+Dataset_percentage <- aggregate(survived ~ colors, data = Dataset, FUN = mean)
+
+
+
+# Plotting raw data points
+surv_raw <- ggdotchart(
+  Dataset_percentage, 
+  x = "colors", 
+  y = "survived",
+  color = "colors", 
+  palette = c("black", "black", "black"), 
+  alpha = 0.3,
+  size = 5, 
+  shape = 21,
+  #add = "segment", 
+  #add.params = list(color = "lightgray", size = 1.3),
+  position = position_dodge(0.6),
+  ggtheme = theme_classic(),
+  sorting = "none"
+)
+
+# Overlay emmeans and CI on the raw data plot
+surv_overlay_plot2 <- surv_raw +
+  geom_errorbar(
+    data = back.emmeans_surv,
+    aes(
+      x = colors, #factor(trt, levels = trt_order), 
+      y = prob,  # Assuming prob is the probability in decimal form
+      ymin = asymp.LCL,
+      ymax = asymp.UCL,
+      color = colors
+    ),
+    position = position_dodge(width = 0.6),
+    width = 0.3,
+    size = 1
+  ) +
+  geom_point(
+    data = back.emmeans_surv,
+    aes(
+      x = colors, #factor(trt, levels = trt_order), 
+      y = prob,  # Assuming prob is the probability in decimal form
+      color = colors
+    ),
+    position = position_dodge(width = 0.6),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+  ) +
+ geom_text(
+    data = back.emmeans_surv,
+    aes(
+      x = colors, # Adjust position based on factor levels,
+      color = colors,
+     y = asymp.UCL + 0.02,  # Adjust the position of the letters
+      label = .group  # Use the .group column for labels
+    ),
+    position = position_dodge(width = 0.6),
+   vjust = -0.5,  # Adjust vertical position
+   size = 4
+  ) +
+  scale_fill_manual(values = c("#990099", "#FF6666", "gold")) +
+  scale_color_manual(
+    values = c("#990099", "#FF6666", "gold"),  # Remove black color
+   # labels = c("pseudomajus", "F1 Hybrid", "striatum")  # Update labels
+  ) +
+  ylim(0,1.05)+
+  theme_classic() +
+  my_theme +
+  guides(fill = FALSE) +
+  theme(legend.position = "none") +
+  ylab("survival probability") +
+  xlab(NULL)+
+  theme(axis.title.y = element_text(margin = margin(r = 10)))+
+   scale_x_discrete(guide = guide_axis(n.dodge=2),
+                    labels = c("pseudomajus", "F1 Hybrid", "striatum"))
+
+
+surv_overlay_plot2
+
+
+
+
+
+```
+
+
+
+### ----- Flowering - All levels
+
+
+Compute emmeans and CI
+
+```{r}
+emmeans_flowering = emmeans(glmer_f,
+                   ~ colors:trt,  calc = c(n = ".wgt."))
+
+back.emmeans_flowering<-confint(emmeans_flowering, type = "response")
+
+```
+
+Add letter display from tukey tests
+
+```{r}
+
+
+flow_emmeans_cld <- multcomp::cld(object = emmeans_flowering,
+                           Letters = letters)
+
+flow_emmeans_cld <- flow_emmeans_cld %>% 
+  arrange(trt, colors) %>% 
+  select(.group, colors, trt)
+
+
+back.emmeans_flowering <- left_join(back.emmeans_flowering, flow_emmeans_cld, by = c("trt", "colors"))
+
+back.emmeans_flowering
+
+```
+
+
+```{r}
+
+Dataset_percentage <- aggregate(flowering ~ trt + colors, data = Dataset, FUN = mean)
+
+
+# Plotting raw data points
+flow_raw <- ggdotchart(
+  Dataset_percentage, 
+  x = "trt", 
+  y = "flowering",
+  color = "colors", 
+  palette = c("black", "black", "black"), 
+  alpha = 0.3,
+  size = 5, 
+  shape = 21,
+  #add = "segment", 
+  #add.params = list(color = "lightgray", size = 1.3),
+  position = position_dodge(0.6),
+  ggtheme = theme_classic(),
+    sorting = "none",
+  order = trt_order
+)
+
+# Overlay emmeans and CI on the raw data plot
+flow_overlay_plot <- flow_raw +
+  geom_errorbar(
+    data = back.emmeans_flowering,
+    aes(
+      x = trt, #factor(trt, levels = c(trt_order)), 
+      y = prob,  # Assuming prob is the probability in decimal form
+      ymin = asymp.LCL,
+      ymax = asymp.UCL,
+      color = colors
+    ),
+    position = position_dodge(width = 0.6),
+    width = 0.3,
+    size = 1
+  ) +
+  geom_point(
+    data = back.emmeans_flowering,
+    aes(
+      x = trt, #factor(trt, levels = c(trt_order)), 
+      y = prob,  # Assuming prob is the probability in decimal form
+      color = colors
+    ),
+    position = position_dodge(width = 0.6),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+  ) +
+ # geom_text(
+ #   data = back.emmeans_flowering,
+ #   aes(
+ #     x = trt, # Adjust position based on factor levels,
+  #    color = colors,
+  #    y = asymp.UCL + 0.02,  # Adjust the position of the letters
+  #    label = .group  # Use the .group column for labels
+ #   ),
+ #   position = position_dodge(width = 0.6),
+ #   vjust = -0.5,  # Adjust vertical position
+ #   size = 4
+#  ) +
+  scale_fill_manual(values = c("#990099", "#FF6666", "gold")) +
+  scale_color_manual(
+    values = c("#990099", "#FF6666", "gold"),  # Remove black color
+    labels = c("pseudomajus", "F1 Hybrid", "striatum")  # Update labels
+  ) +
+  ylim(0, 1.05)+
+  theme_classic() +
+  my_theme +
+  guides(fill = FALSE) +
+  #labs(color = "Phenotype") +
+  theme(legend.position = "none")+
+  xlab(NULL) +
+  ylab("flowering probability") +
+  theme(axis.title.y = element_text(margin = margin(r = 10)))
+
+
+flow_overlay_plot
+
+```
+
+
+### ----- Flowering - significant levels
+
+#### colors
+
+Compute emmeans and CI
+
+```{r}
+emmeans_flowering = emmeans(glmer_f,
+                   ~ colors,  calc = c(n = ".wgt."))
+
+back.emmeans_flowering<-confint(emmeans_flowering, type = "response")
+
+```
+
+Add letter display from tukey tests
+
+```{r}
+
+
+flow_emmeans_cld <- multcomp::cld(object = emmeans_flowering,
+                           Letters = letters)
+
+flow_emmeans_cld <- flow_emmeans_cld %>% 
+  arrange(colors) %>% 
+  select(.group, colors)
+
+
+back.emmeans_flowering <- left_join(back.emmeans_flowering, flow_emmeans_cld, by = "colors")
+
+back.emmeans_flowering
+
+```
+
+
+```{r}
+
+Dataset_percentage <- aggregate(flowering ~ colors, data = Dataset, FUN = mean)
+
+
+# Plotting raw data points
+flow_raw <- ggdotchart(
+  Dataset_percentage, 
+  x = "colors", 
+  y = "flowering",
+  color = "colors", 
+  palette = c("black", "black", "black"), 
+  alpha = 0.3,
+  size = 5, 
+  shape = 21,
+  #add = "segment", 
+  #add.params = list(color = "lightgray", size = 1.3),
+  position = position_dodge(0.6),
+  ggtheme = theme_classic(),
+    sorting = "none"
+)
+
+# Overlay emmeans and CI on the raw data plot
+flow_overlay_plot2 <- flow_raw +
+  geom_errorbar(
+    data = back.emmeans_flowering,
+    aes(
+      x = colors, #factor(trt, levels = c(trt_order)), 
+      y = prob,  # Assuming prob is the probability in decimal form
+      ymin = asymp.LCL,
+      ymax = asymp.UCL,
+      color = colors
+    ),
+    position = position_dodge(width = 0.6),
+    width = 0.3,
+    size = 1
+  ) +
+  geom_point(
+    data = back.emmeans_flowering,
+    aes(
+      x = colors, #factor(trt, levels = c(trt_order)), 
+      y = prob,  # Assuming prob is the probability in decimal form
+      color = colors
+    ),
+    position = position_dodge(width = 0.6),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+  ) +
+  geom_text(
+    data = back.emmeans_flowering,
+    aes(
+      x = colors, # Adjust position based on factor levels,
+      color = colors,
+      y = asymp.UCL + 0.02,  # Adjust the position of the letters
+      label = .group  # Use the .group column for labels
+    ),
+    position = position_dodge(width = 0.6),
+    vjust = -0.5,  # Adjust vertical position
+    size = 4
+ ) +
+  scale_fill_manual(values = c("#990099", "#FF6666", "gold")) +
+  scale_color_manual(
+    values = c("#990099", "#FF6666", "gold"),  # Remove black color
+    labels = c("pseudomajus", "F1 Hybrid", "striatum")  # Update labels
+  ) +
+  ylim(0, 1.05)+
+  theme_classic() +
+  my_theme +
+  guides(fill = FALSE) +
+  #labs(color = "Phenotype") +
+  theme(legend.position = "none") + 
+  xlab(NULL) +
+  ylab("flowering probability") +
+  theme(axis.title.y = element_text(margin = margin(r = 10)))+
+   scale_x_discrete(guide = guide_axis(n.dodge=2),
+                    labels = c("pseudomajus", "F1 Hybrid", "striatum"))
+
+
+flow_overlay_plot2
+
+```
+
+
+#### trt
+
+Compute emmeans and CI
+
+```{r}
+emmeans_flowering = emmeans(glmer_f,
+                   ~ trt,  calc = c(n = ".wgt."))
+
+back.emmeans_flowering<-confint(emmeans_flowering, type = "response")
+
+```
+
+Add letter display from tukey tests
+
+```{r}
+
+
+flow_emmeans_cld <- multcomp::cld(object = emmeans_flowering,
+                           Letters = letters)
+
+flow_emmeans_cld <- flow_emmeans_cld %>% 
+  arrange(trt) %>% 
+  select(.group, trt)
+
+
+back.emmeans_flowering <- left_join(back.emmeans_flowering, flow_emmeans_cld, by = "trt")
+
+back.emmeans_flowering
+
+```
+
+
+```{r}
+
+Dataset_percentage <- aggregate(flowering ~ trt, data = Dataset, FUN = mean)
+
+
+# Plotting raw data points
+flow_raw <- ggdotchart(
+  Dataset_percentage, 
+  x = "trt", 
+  y = "flowering",
+  #color = "colors", 
+  palette = c("black", "black", "black"), 
+  alpha = 0.3,
+  size = 5, 
+  shape = 21,
+  #add = "segment", 
+  #add.params = list(color = "lightgray", size = 1.3),
+  position = position_dodge(0.6),
+  ggtheme = theme_classic(),
+    sorting = "none"
+)
+
+# Overlay emmeans and CI on the raw data plot
+flow_overlay_plot3 <- flow_raw +
+  geom_errorbar(
+    data = back.emmeans_flowering,
+    aes(
+      x = trt, #factor(trt, levels = c(trt_order)), 
+      y = prob,  # Assuming prob is the probability in decimal form
+      ymin = asymp.LCL,
+      ymax = asymp.UCL,
+    #  color = colors
+    ),
+    position = position_dodge(width = 0.6),
+    width = 0.3,
+    size = 1
+  ) +
+  geom_point(
+    data = back.emmeans_flowering,
+    aes(
+      x = trt, #factor(trt, levels = c(trt_order)), 
+      y = prob,  # Assuming prob is the probability in decimal form
+   #   color = colors
+    ),
+    position = position_dodge(width = 0.6),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+  ) +
+  geom_text(
+    data = back.emmeans_flowering,
+    aes(
+      x = trt, # Adjust position based on factor levels,
+     # color = colors,
+      y = asymp.UCL + 0.02,  # Adjust the position of the letters
+      label = .group  # Use the .group column for labels
+    ),
+    position = position_dodge(width = 0.6),
+    vjust = -0.5,  # Adjust vertical position
+    size = 4
+ ) +
+ # scale_fill_manual(values = c("#990099", "#FF6666", "gold")) +
+ # scale_color_manual(
+#    values = c("#990099", "#FF6666", "gold"),  # Remove black color
+#    labels = c("pseudomajus", "F1 Hybrid", "striatum")  # Update labels
+#  ) +
+  ylim(0, 1.05)+
+  theme_classic() +
+  my_theme +
+  guides(fill = FALSE) +
+  labs(color = "Phenotype") +
+  xlab(NULL) +
+  ylab("flowering probability") +
+  theme(axis.title.y = element_text(margin = margin(r = 10)))+
+   scale_x_discrete(guide = guide_axis(n.dodge=2))
+
+
+flow_overlay_plot3
+
+```
+
+
+### ----- N flowers - All levels
+
+Compute emmeans and CI
+
+
+```{r}
+### N flowers (1 drought level) - treatment significant
+
+marginal_nf.d = emmeans(glmer_nf_d,
+                   ~ colors:trt,  calc = c(n = ".wgt."))
+
+back.emmeans_nflow<-confint(marginal_nf.d, type = "response")
+
+
+back.emmeans_nflow[which(is.infinite(back.emmeans_nflow$asymp.UCL)),"asymp.UCL"] <- 0
+
+```
+
+
+
+Add letter display from tukey tests
+
+```{r}
+
+
+nflow_emmeans_cld <- multcomp::cld(object = marginal_nf.d,
+                           Letters = letters)
+
+nflow_emmeans_cld <- nflow_emmeans_cld %>% 
+  arrange(trt, colors) %>% 
+  select(.group, colors, trt)
+
+
+back.emmeans_nflow <- left_join(back.emmeans_nflow, nflow_emmeans_cld, by = c("trt", "colors"))
+
+back.emmeans_nflow
+
+```
+
+
+
+
+
+```{r}
+
+
+nflow_raw <- ggplot(Dataset, aes(x = trt, y = flower_count, group = colors)) +
+  geom_jitter(
+    aes(color = "black", fill = "black"),
+    position = position_jitterdodge(0.08),
+    size = 1.2,
+    alpha = alpha_raw_points
+  ) +
+  scale_fill_manual(values=c("black", "black", "black"))+
+  scale_color_manual(values=c("black", "black", "black"))+
+  theme_classic() +
+  my_theme
+
+  
+
+
+
+# Overlay emmeans and CI on the raw data plot
+nflow_overlay_plot <- nflow_raw +
+  geom_errorbar(
+    data = back.emmeans_nflow,
+    aes(x = trt, y = response, ymin = asymp.LCL, ymax = asymp.UCL, color = colors),
+    position = position_dodge(width = 0.75),
+    width = 0.3,
+    size = 1
+  ) +
+  
+  geom_point(
+    data = back.emmeans_nflow,
+    aes(x = trt, y = response, color = colors),
+    position = position_dodge(width = 0.75),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+    
+  ) +
+#  geom_text(
+ #   data = back.emmeans_nflow,
+ #   aes(
+ #     x = trt, # Adjust position based on factor levels,
+ #     color = colors,
+ #     y = asymp.UCL + 0.1,  # Adjust the position of the letters
+ #     label = .group  # Use the .group column for labels
+  #  ),
+ #   position = position_dodge(width = 0.75),
+ #   vjust = -0.5,  # Adjust vertical position
+ #   size = 4
+#  ) +
+    scale_fill_manual(values=c("#990099", "#FF6666", "gold"))+
+  scale_color_manual(values=c("black", "#990099", "#FF6666", "gold"),labels = c("raw data", "pseudomajus", "F1 hybrid", "striatum"))+
+  theme_classic()+
+  my_theme+
+guides(fill = FALSE)+
+#labs(color = "phenotype")+
+  theme(legend.position = "none") +
+  scale_x_discrete(labels = c("pseudomajus", "F1 Hybrid", "striatum")) + 
+  xlab(NULL)+
+  ylab("flower count")+
+  theme(axis.title.y = element_text(margin = margin(r = 10)))
+  
+
+nflow_overlay_plot
+
+
+```
+
+
+### ----- N flowers - significant levels
+
+
+#### colors
+
+Compute emmeans and CI
+
+
+```{r}
+### N flowers (1 drought level) - treatment significant
+
+marginal_nf.d = emmeans(glmer_nf_d,
+                   ~ colors,  calc = c(n = ".wgt."))
+
+back.emmeans_nflow<-confint(marginal_nf.d, type = "response")
+
+
+back.emmeans_nflow[which(is.infinite(back.emmeans_nflow$asymp.UCL)),"asymp.UCL"] <- 0
+
+```
+
+
+
+Add letter display from tukey tests
+
+```{r}
+
+
+nflow_emmeans_cld <- multcomp::cld(object = marginal_nf.d,
+                           Letters = letters)
+
+nflow_emmeans_cld <- nflow_emmeans_cld %>% 
+  arrange(colors) %>% 
+  select(.group, colors)
+
+
+back.emmeans_nflow <- left_join(back.emmeans_nflow, nflow_emmeans_cld, by =  "colors")
+
+# we manually assign a different letter to hybrids because they have 0 flowers
+
+back.emmeans_nflow[back.emmeans_nflow$colors == "M_Y", ".group"] <- "b"
+
+back.emmeans_nflow
+
+```
+
+
+
+
+
+```{r}
+
+
+
+# Overlay emmeans and CI on the raw data plot
+nflow_overlay_plot2 <- ggplot(back.emmeans_nflow, aes(x = colors, y = response, group = colors)) +
+  #nflow_raw +
+  geom_errorbar(
+    data = back.emmeans_nflow,
+    aes(x = colors, y = response, ymin = asymp.LCL, ymax = asymp.UCL, color = colors),
+    position = position_dodge(width = 0.75),
+    width = 0.3,
+    size = 1
+  ) +
+  
+  geom_point(
+    data = back.emmeans_nflow,
+    aes(x = colors, y = response, color = colors),
+    position = position_dodge(width = 0.75),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+    
+  ) +
+ geom_text(
+    data = back.emmeans_nflow,
+    aes(
+      x = colors, # Adjust position based on factor levels,
+      color = colors,
+      y = asymp.UCL + 0.1,  # Adjust the position of the letters
+      label = .group  # Use the .group column for labels
+    ),
+    position = position_dodge(width = 0.75),
+    vjust = -0.5,  # Adjust vertical position
+    size = 4
+  ) +
+    scale_fill_manual(values=c("#990099", "#FF6666", "gold"))+
+  scale_color_manual(values=c("#990099", "#FF6666", "gold"),labels = c("pseudomajus", "F1 hybrid", "striatum"))+
+  theme_classic()+
+  my_theme+
+guides(fill = FALSE)+
+#labs(color = "phenotype")+
+  theme(legend.position = "none") + 
+  xlab(NULL)+
+  ylab("flower count")+
+  theme(axis.title.y = element_text(margin = margin(r = 10)))+
+   scale_x_discrete(guide = guide_axis(n.dodge=2),
+                    labels = c("pseudomajus", "F1 Hybrid", "striatum"))
+  
+
+nflow_overlay_plot2
+
+
+```
+
+
+
+
+
+
+#### trt
+
+Compute emmeans and CI
+
+
+```{r}
+### N flowers (1 drought level) - treatment significant
+
+marginal_nf.d = emmeans(glmer_nf_d,
+                   ~ trt,  calc = c(n = ".wgt."))
+
+back.emmeans_nflow<-confint(marginal_nf.d, type = "response")
+
+
+back.emmeans_nflow[which(is.infinite(back.emmeans_nflow$asymp.UCL)),"asymp.UCL"] <- 0
+
+```
+
+
+
+Add letter display from tukey tests
+
+```{r}
+
+
+nflow_emmeans_cld <- multcomp::cld(object = marginal_nf.d,
+                           Letters = letters)
+
+nflow_emmeans_cld <- nflow_emmeans_cld %>% 
+  arrange(trt) %>% 
+  select(.group, trt)
+
+
+back.emmeans_nflow <- left_join(back.emmeans_nflow, nflow_emmeans_cld, by =  "trt")
+
+# manually assign different letter to late drought
+
+back.emmeans_nflow[back.emmeans_nflow$trt == "late drought", ".group"] <- "c"
+
+back.emmeans_nflow
+
+```
+
+
+
+
+
+```{r}
+
+
+
+# Overlay emmeans and CI on the raw data plot
+nflow_overlay_plot3 <- ggplot(back.emmeans_nflow, aes(x = trt, y = response)) +
+  #nflow_raw +
+  geom_errorbar(
+    data = back.emmeans_nflow,
+    aes(x = trt, y = response, ymin = asymp.LCL, ymax = asymp.UCL),
+    position = position_dodge(width = 0.75),
+    width = 0.3,
+    size = 1
+  ) +
+  
+  geom_point(
+    data = back.emmeans_nflow,
+    aes(x = trt, y = response),
+    position = position_dodge(width = 0.75),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+    
+  ) +
+ geom_text(
+    data = back.emmeans_nflow,
+    aes(
+      x = trt, # Adjust position based on factor levels,
+      y = asymp.UCL + 0.1,  # Adjust the position of the letters
+      label = .group  # Use the .group column for labels
+    ),
+    position = position_dodge(width = 0.75),
+    vjust = -0.5,  # Adjust vertical position
+    size = 4
+  ) +
+  theme_classic()+
+  my_theme+
+guides(fill = FALSE)+
+labs(color = "phenotype")+
+  xlab(NULL)+
+  ylab("flower count")+
+  theme(axis.title.y = element_text(margin = margin(r = 10)))+
+   scale_x_discrete(guide = guide_axis(n.dodge=2))
+  
+
+nflow_overlay_plot3
+
+
+```
+
+
+
+
+
+
+
+
+
+### ----- Height
+
+
+```{r}
+
+emmeans_height = emmeans(lmer_height,
+                   ~ colors:trt,  calc = c(n = ".wgt."))
+
+emmeans_height <- multcomp::cld(object = emmeans_height,
+                                   Letters = letters)
+
+```
+
+
+
+
+RAW DATA
+
+
+
+```{r}
+
+
+height_raw <- ggplot(Dataset, aes(x = trt, y = height_cm, group = colors)) +
+  geom_jitter(
+    aes(color = "black", fill = "black"),
+    position = position_jitterdodge(0.08),
+    size = 1.2,
+    alpha = alpha_raw_points
+  ) +
+  scale_fill_manual(values=c("black", "black", "black"))+
+  scale_color_manual(values=c("black", "black", "black"))+
+  theme_classic() +
+  my_theme
+
+  
+
+
+
+# Overlay emmeans and CI on the raw data plot
+height_overlay_plot <- height_raw +
+  geom_errorbar(
+    data = emmeans_height,
+    aes(x = trt, y = emmean, ymin = lower.CL, ymax = upper.CL, color = colors),
+    position = position_dodge(width = 0.75),
+    width = 0.3,
+    size = 1
+  ) +
+  
+  geom_point(
+    data = emmeans_height,
+    aes(x = trt, y = emmean, color = colors),
+    position = position_dodge(width = 0.75),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+    
+  ) +
+  geom_text(
+    data = emmeans_height,
+    aes(
+      x = trt, # Adjust position based on factor levels,
+      color = colors,
+      y = upper.CL + 0.1,  # Adjust the position of the letters
+      label = .group  # Use the .group column for labels
+    ),
+    position = position_dodge(width = 0.75),
+    vjust = -0.5,  # Adjust vertical position
+    size = 4
+  ) +
+    scale_fill_manual(values=c("#990099", "#FF6666", "gold"))+
+  scale_color_manual(values=c("black", "#990099", "#FF6666", "gold"),labels = c("raw data", "pseudomajus", "F1 hybrid", "striatum"))+
+  theme_classic()+
+  my_theme+
+guides(fill = FALSE)+
+labs(color = "phenotype")+
+  xlab(NULL)+
+  ylab("height (cm)")+
+  theme(axis.title.y = element_text(margin = margin(r = 10)))
+  
+
+height_overlay_plot
+
+
+```
+
+
+
+### ----- Bushiness
+
+Compute emmeans and CI
+
+```{r}
+emmeans_bush = emmeans(glmer_bush,
+                   ~ colors:trt,  calc = c(n = ".wgt."))
+
+back.emmeans_bush<-confint(emmeans_bush, type = "response")
+
+
+```
+
+
+Add letter display from tukey tests
+
+```{r}
+
+emmeans_bush_cld <- multcomp::cld(object = emmeans_bush,
+                                   Letters = letters)
+
+emmeans_bush_cld <- emmeans_bush_cld %>% 
+  arrange(trt, colors) %>% 
+  select(.group, colors, trt)
+
+
+back.emmeans_bush <- left_join(back.emmeans_bush, emmeans_bush_cld, by = c("trt", "colors"))
+
+back.emmeans_bush
+
+```
+
+
+
+
+```{r}
+
+
+bush_raw <- ggplot(Dataset, aes(x = trt, y = bushiness, group = colors)) +
+  geom_jitter(
+    aes(color = "black", fill = "black"),
+    position = position_jitterdodge(0.08),
+    size = 1.2,
+    alpha = alpha_raw_points
+  ) +
+  scale_fill_manual(values=c("black", "black", "black"))+
+  scale_color_manual(values=c("black", "black", "black"))+
+  theme_classic() +
+  my_theme
+
+  
+
+
+
+# Overlay emmeans and CI on the raw data plot
+bushiness_overlay_plot <- bush_raw +
+  geom_errorbar(
+    data = back.emmeans_bush,
+    aes(x = trt, y = rate, ymin = asymp.LCL, ymax = asymp.UCL, color = colors),
+    position = position_dodge(width = 0.75),
+    width = 0.3,
+    size = 1
+  ) +
+  
+  geom_point(
+    data = back.emmeans_bush,
+    aes(x = trt, y = rate, color = colors),
+    position = position_dodge(width = 0.75),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+    
+  ) +
+  geom_text(
+    data = back.emmeans_bush,
+    aes(
+      x = trt, # Adjust position based on factor levels,
+      color = colors,
+      y = asymp.UCL + 0.1,  # Adjust the position of the letters
+      label = .group  # Use the .group column for labels
+    ),
+    position = position_dodge(width = 0.75),
+    vjust = -0.5,  # Adjust vertical position
+    size = 4
+  ) +
+    scale_fill_manual(values=c("#990099", "#FF6666", "gold"))+
+  scale_color_manual(values=c("black", "#990099", "#FF6666", "gold"),labels = c("raw data", "pseudomajus", "F1 hybrid", "striatum"))+
+  theme_classic()+
+  my_theme+
+guides(fill = FALSE)+
+labs(color = "phenotype")+
+  xlab(NULL)+
+  ylab("bushiness (n nodes)")+
+  theme(axis.title.y = element_text(margin = margin(r = 10)))
+  
+
+bushiness_overlay_plot
+
+
+```
+
+
+
+
+
+### ----- Time to flower
+
+
+Compute emmeans and CI
+
+```{r}
+emmeans_tflow = emmeans(glmer_tf,
+                   ~ colors:trt,  calc = c(n = ".wgt."))
+
+back.emmeans_tflow<-confint(emmeans_tflow, type = "response")
+
+```
+
+
+Add letter display from tukey tests
+
+```{r}
+
+emmeans_tflow_cld <- multcomp::cld(object = emmeans_tflow,
+                                   Letters = letters)
+
+emmeans_tflow_cld <- emmeans_tflow_cld %>% 
+  arrange(trt, colors) %>% 
+  select(.group, colors, trt)
+
+
+back.emmeans_tflow <- left_join(back.emmeans_tflow, emmeans_tflow_cld, by = c("trt", "colors"))
+
+back.emmeans_tflow
+
+```
+
+
+
+
+
+
+```{r}
+tflow_raw <- ggplot(Dataset, aes(x = trt, y = days_1flower, group = colors)) +
+  geom_jitter(
+    aes(color = "black", fill = "black"),
+    position = position_jitterdodge(0.08),
+    size = 1.2,
+    alpha = alpha_raw_points
+  ) +
+  scale_fill_manual(values=c("black", "black", "black"))+
+  scale_color_manual(values=c("black", "black", "black"))+
+  theme_classic() +
+  my_theme
+
+  
+
+
+
+# Overlay emmeans and CI on the raw data plot
+tflow_overlay_plot <- tflow_raw +
+  geom_errorbar(
+    data = back.emmeans_tflow,
+    aes(x = trt, y = response, ymin = asymp.LCL, ymax = asymp.UCL, color = colors),
+    position = position_dodge(width = 0.75),
+    width = 0.3,
+    size = 1
+  ) +
+  
+  geom_point(
+    data = back.emmeans_tflow,
+    aes(x = trt, y = response, color = colors),
+    position = position_dodge(width = 0.75),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+    
+  )  +
+  geom_text(
+    data = back.emmeans_tflow,
+    aes(
+      x = trt, # Adjust position based on factor levels,
+      color = colors,
+      y = asymp.UCL + 0.1,  # Adjust the position of the letters
+      label = .group  # Use the .group column for labels
+    ),
+    position = position_dodge(width = 0.75),
+    vjust = -0.5,  # Adjust vertical position
+    size = 4
+  ) +
+    scale_fill_manual(values=c("#990099", "#FF6666", "gold"))+
+  scale_color_manual(values=c("black", "#990099", "#FF6666", "gold"),labels = c("raw data", "pseudomajus", "F1 hybrid", "striatum"))+
+  theme_classic()+
+  my_theme+
+guides(fill = FALSE)+
+labs(color = "phenotype")+
+  ylim(38,95)+
+  xlab(NULL)+
+  ylab("time to flower (days)")+
+  theme(axis.title.y = element_text(margin = margin(r = 10)))
+
+tflow_overlay_plot
+
+```
+
+
+
+
+# Fig 1
+
+```{r}
+
+arranged_flowering_coltrt <- ggarrange(
+  
+  flow_overlay_plot2 + ylab(NULL), flow_overlay_plot3 + ylab(NULL),
+  
+  ncol = 2,
+  nrow = 1,
+  
+  labels = c("D", "E")
+)
+
+
+arranged_nflow_coltrt <- ggarrange(
+  
+  nflow_overlay_plot2 + ylab(NULL) + ylim(0,1.8), nflow_overlay_plot3 + ylab(NULL) +ylim(0,6.5),
+  
+  ncol = 2,
+  nrow = 1,
+  
+  labels = c("G", "H")
+)
+
+
+
+figure1 <- ggarrange(
+  
+  surv_overlay_plot +
+  theme(axis.title.y = element_text(margin = margin(r = 10)))+
+   scale_x_discrete(guide = guide_axis(n.dodge=2)), 
+  
+  surv_overlay_plot2 + ylab(NULL) + plot_spacer(),
+  
+  flow_overlay_plot+
+  theme(axis.title.y = element_text(margin = margin(r = 10)))+
+   scale_x_discrete(guide = guide_axis(n.dodge=2)), 
+  
+  arranged_flowering_coltrt,
+  
+  nflow_overlay_plot+
+  theme(axis.title.y = element_text(margin = margin(r = 10)))+
+   scale_x_discrete(guide = guide_axis(n.dodge=2)), 
+ 
+   arranged_nflow_coltrt,
+  
+  nrow = 3,
+  ncol = 2,
+  
+  common.legend = TRUE,
+  
+  labels = c("A", "B", "C", "", "F", "")
+  
+)
+
+figure1
+
+ggsave("../figures/figure1_test.png", height = 9, width = 10)
+
+
+```
+
+
+
+
+```{r}
+
+figure_2_a <- ggarrange(
+  
+    surv_overlay_plot,
+
+flow_overlay_plot,
+
+nflow_overlay_plot,
+
+nrow = 3,
+ncol = 1,
+
+common.legend = TRUE,
+
+labels = c("A", "B", "C")
+  
+)
+
+
+figure_2_a
+
+
+#ggsave("../figures/figure_1.png", height = 8, width = 5)
+
+```
+
+
+
+
+```{r}
+
+
+figure_2_b <- ggarrange(
+  
+    height_overlay_plot,
+
+bushiness_overlay_plot,
+
+tflow_overlay_plot,
+
+nrow = 3,
+ncol = 1,
+
+common.legend = TRUE,
+
+labels = c("A", "B", "C")
+  
+)
+
+figure_2_b
+
+
+#ggsave("../figures/figure_s1.png", height = 8, width = 5)
+
+```
+
+
+
+
+## save emmeans results
+
+```{r}
+
+options(scipen = 999)
+
+colmnames_anova <- c("colors", "trt", "estimated response", "SE", "df", "n",
+                     "lower CI", "upper CI", "comp" ,"trait")
+
+df_anova_surv <- as.data.frame(back.emmeans_surv)
+df_anova_surv$trait <- rep("survival", nrow(df_anova_surv))
+colnames(df_anova_surv) = colmnames_anova
+
+df_anova_flow <- as.data.frame(back.emmeans_flowering)
+df_anova_flow$trait <- rep("flowering", nrow(df_anova_flow))
+colnames(df_anova_flow) = colmnames_anova
+
+df_anova_nflow <- as.data.frame(back.emmeans_nflow)
+df_anova_nflow$trait <- rep("n flowers", nrow(df_anova_nflow))
+colnames(df_anova_nflow) = colmnames_anova
+ 
+df_anova_height <- as.data.frame(emmeans_height)
+df_anova_height$trait <- rep("height (cm)", nrow(df_anova_height))
+colnames(df_anova_height) = colmnames_anova
+
+df_anova_bush <- as.data.frame(back.emmeans_bush)
+df_anova_bush$trait <- rep("bushiness (n nodes)", nrow(df_anova_bush))
+colnames(df_anova_bush) = colmnames_anova
+
+df_anova_tflow <- as.data.frame(back.emmeans_tflow)
+df_anova_tflow$trait <- rep("time to flower (days)", nrow(df_anova_tflow))
+colnames(df_anova_tflow) = colmnames_anova
+
+df_anovas <- do.call("rbind", list(df_anova_surv, 
+                      df_anova_flow, 
+                      df_anova_nflow,
+                      df_anova_height,
+                      df_anova_bush,
+                      df_anova_tflow))
+
+df_anovas$`estimated response` <- round(df_anovas$`estimated response`, 2)
+df_anovas$`lower CI` <- round(df_anovas$`lower CI`, 2)
+df_anovas$`upper CI` <- round(df_anovas$`upper CI`, 2)
+
+df_anovas
+
+#write.csv(df_anovas, "../tables/df_emmeans.csv")
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

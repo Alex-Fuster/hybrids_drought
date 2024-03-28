@@ -1,0 +1,101 @@
+---
+title: "Compute geographic locations of parental plant populations"
+output: html_notebook
+---
+
+load packages
+
+```{r}
+library("ggplot2")
+library("sf")
+library("rnaturalearth")
+library("rnaturalearthdata")
+library("geosphere")
+```
+
+Create base map object:
+
+```{r}
+world <- ne_countries(scale = "medium", returnclass = "sf")
+```
+
+Load coordinates:
+
+```{r}
+sites <- read.csv("../data/coordinates_populations.csv")
+
+sites
+```
+
+## Create plot
+
+```{r}
+
+plot_pyr <- ggplot(data = world) +
+    geom_sf() +
+    geom_point(data = sites, aes(x = long, y = lat, group = species, color = species), size = 4) +
+    coord_sf(xlim = c(-3.17, 3.49), ylim = c(44.28, 41.10), expand = FALSE)+
+   scale_color_manual(values = c("#990099","gold"),
+                      labels = c("A. m. pseudomajus", "A. m. striatum"))
+
+
+plot_spain <- ggplot(data = world) +
+    geom_sf() +
+    coord_sf( xlim = c(-14, 14), ylim = c(48, 36), expand = FALSE)+
+    geom_rect(xmin = -2.4, xmax =  3.49, ymin = 41.5, ymax = 43.5, 
+     fill = NA, colour = "black", size = 1)
+
+
+plot_geolocations <- plot_pyr +
+  annotation_custom(
+    grob = ggplotGrob(plot_spain),
+    xmin = -3,
+    xmax = 0,
+    ymin = 41,
+    ymax = 42.5
+  )
+
+plot_geolocations
+
+#ggsave("../figures/figureS1.png", height = 5, width = 7)
+
+
+```
+
+
+
+## Compute range of geographic distances
+
+```{r}
+
+sites <- data.frame(
+  ID = c("Bes", "Pra", "Vil", "Thu", "Example"),
+  species = c("pseudomajus", "pseudomajus", "striatum", "striatum", "example_species"),
+  long = c(2.67, 2.5, 2.36, 2.72, 2.2),
+  lat = c(42.2, 42.4, 42.6, 42.6, 42.8)
+)
+
+# Create a matrix with coordinates
+coords_matrix <- sites[, c("long", "lat")]
+
+# Compute pairwise distances
+distances <- distm(coords_matrix, fun = distVincentySphere)
+
+# Convert distances to kilometers
+distances_km <- distances / 1000
+
+distances_km
+```
+
+Compute range of distances
+
+```{r}
+non_zero_distances <- distances_km[distances_km > 0]
+
+# Compute the range of non-zero distances
+range_of_non_zero_distances <- range(non_zero_distances)
+
+range_of_non_zero_distances
+
+```
+

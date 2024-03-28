@@ -1,0 +1,172 @@
+---
+title: "Compute dataset used for the analyses from raw data"
+output: html_notebook
+---
+
+
+Load packages
+
+```{r}
+library(dplyr)
+library(stringr)
+library(tidyr)
+```
+
+
+
+Load survival data:
+
+```{r}
+
+df_surv_wilt <- read.csv("../data/20190611survival_wilting_flowering.csv", header = TRUE)
+
+
+df_surv_wilt$new_block <- as.factor(df_surv_wilt$new_block)
+colnames(df_surv_wilt)[colnames(df_surv_wilt) == "future"] <- "trt"
+
+#Create column "survived":
+df_surv_wilt$dead1[is.na(df_surv_wilt$dead1)] <- 0 #Assign 0 value to Na in our dead1 and dead2 columns.
+df_surv_wilt$dead2[is.na(df_surv_wilt$dead2)] <- 0
+df_surv_wilt$survived <- ifelse(df_surv_wilt$dead1 == 1, 0, ifelse(df_surv_wilt$dead2 == 1, 0, 1)) #A new column "survived" is created, with "1" only when having "0" values on both "dead1" and "dead2" columns.
+df_surv_wilt$trt[which(df_surv_wilt$trt == "water")] <- "control"
+
+df_surv_wilt
+```
+
+
+
+Merge with other trait's data:
+
+```{r}
+df_traits <- read.csv("../data/20190611_final_size_flrs.csv", header = TRUE)
+colnames(df_traits)[4] <- "bushiness"
+
+dataset <- merge(df_surv_wilt, df_traits, by = "unique_id", all = TRUE)
+
+dataset
+
+```
+
+Add time to flower data and merge it to the dataset:
+
+```{r}
+
+df_time_flowering <- read.csv("../data/flowering_times.csv", header = TRUE)
+dataset <- merge(dataset, df_time_flowering, by = "unique_id", all = TRUE)
+
+# correct two mistakes for the days until 1st flower
+
+dataset[which(dataset$days_1flower == 76),"days_1flower"] <- 77
+dataset[which(dataset$days_1flower == 93),"days_1flower"] <- 63
+
+# chech that there are no flower counts without flowering date
+
+n_wrong <- dataset %>%
+  filter(flower_count > 0 & is.na(days_1flower))
+
+if(nrow(n_wrong) == 0){
+  print("all flower counts have a 1st flower date")
+}else{
+ print("problem") 
+}
+
+```
+
+Compute the flowering column (1 or 0, indicating whether the plant flowered or not) based on whether a date of a first flower was recorded:
+
+```{r}
+
+dataset <- dataset %>% 
+  mutate(flowering = ifelse(!is.na(days_1flower) & days_1flower > 0, 1, 0))
+
+dataset
+
+```
+
+check if there are any rows in the dataset where flower_count is greater than 0, but days_1flower is 0 or NA
+
+```{r}
+problematic_rows <- dataset %>% 
+  filter(flower_count > 0 & (days_1flower == 0 | is.na(days_1flower)))
+
+# Print or inspect the problematic rows
+print(problematic_rows)
+```
+
+
+Compute phenotype variable that includes heterosis information (i.e. whether is the result of within or between population cross):
+
+```{r}
+
+# compute w_b variable, which indicates whether the cross is made within or between populations
+
+dataset <- dataset %>%
+  separate(cross, into = c("pop_parent_1", "pop_parent_2"), sep = "x", remove = FALSE)
+
+dataset <- dataset %>%
+  mutate(pop_parent_1 = str_extract(pop_parent_1, "[A-Za-z]{1}")) %>% 
+  mutate(pop_parent_2 = str_extract(pop_parent_2, "[A-Za-z]{1}")) 
+
+dataset <- dataset %>%
+  mutate(w_b = ifelse(pop_parent_1 == pop_parent_2, "w", "b"))
+
+
+dataset
+
+```
+
+Compute dummy variables for populations
+
+
+```{r}
+
+dataset <- dataset %>%
+  rowwise() %>%
+  mutate(pop_T = as.numeric("T" %in% c(pop_parent_1, pop_parent_2)),
+         pop_B = as.numeric("B" %in% c(pop_parent_1, pop_parent_2)),
+         pop_V = as.numeric("V" %in% c(pop_parent_1, pop_parent_2)),
+         pop_P = as.numeric("P" %in% c(pop_parent_1, pop_parent_2)),
+         pop_L = as.numeric("L" %in% c(pop_parent_1, pop_parent_2)))
+
+dataset
+
+
+```
+
+
+Add initial height data
+
+```{r}
+
+df_initial_height <- read.csv("../data/initial.height.csv", header = TRUE)
+
+dataset <- merge(dataset, df_initial_height, by = "unique_id", all = TRUE)
+
+dataset <- dataset %>% 
+  rename(initial_h = height_t0)
+
+```
+
+Set the new block as the block variable:
+
+```{r}
+dataset <- dataset %>% 
+  rename(block = new_block)
+
+```
+
+
+Eliminate non-essential variables:
+
+```{r}
+
+dataset <- dataset[, !names(dataset) %in% c("now_trt", "old_block", "indiv", "wilt9", "dead3")]
+```
+
+
+Save data:
+
+```{r}
+write.csv(dataset, "../dataset.csv")
+```
+

@@ -1,0 +1,229 @@
+---
+title: "Plot drought effects on traits"
+output: html_notebook
+---
+
+
+Load packages
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+library(tidyverse)
+```
+Load dataset:
+
+```{r}
+
+dataset <- read.csv("../tables/df_emmeans.csv")
+
+head(dataset)
+
+```
+
+
+The % decrease is computed as:
+
+
+$$ \frac{V_2 - V_1}{|V_1|} * 100 $$
+
+Where $V_1$ is the original value and $V_2$ the new one.
+
+
+Parameters for plotting:
+
+```{r}
+my.theme<-theme(axis.text=element_text(size=12),
+        axis.title = element_text(size = 14),
+        legend.text=element_text(size=10),
+        legend.title = element_text(size=12),
+        plot.title = element_text(face="bold",size=14,margin=margin(0,0,20,0),hjust = 0.5),
+        axis.title.y = element_text(margin = margin(t = 0, r = 15, b = 0, l = 0)),
+        axis.title.x = element_text(margin = margin(t = 15, r = 0, b = 0, l = 0)))
+
+```
+
+
+Add survival data at control:
+
+```{r}
+
+
+# Create separate datasets for early drought and late drought treatments
+early_drought_data <- dataset %>% filter(trt == "early drought")
+late_drought_data <- dataset %>% filter(trt == "late drought")
+control_data <- dataset %>% filter(trt == "control")
+
+
+# Unique colors in the dataset
+unique_colors <- unique(control_data$colors)
+
+# List to store new rows
+new_rows_list <- list()
+
+# Loop through each color
+for (color in unique_colors) {
+  # Create a new row with "control" trait for the current color
+  new_row <- tibble(
+    colors = color,
+    trt = "control",
+    estimated.response = 1,
+    SE = NA,  # Fill in appropriate values for SE if available
+    df = NA,  # Fill in appropriate values for df if available
+    n = NA,  # Fill in appropriate values for n if available
+    lower.CI = 1,
+    upper.CI = 1,
+    comp = NA,  # Fill in appropriate values for comp if available
+    trait = "survival"
+  )
+  # Append the new row to the list
+  new_rows_list[[color]] <- new_row
+}
+
+# Combine new rows into a single dataframe
+new_rows_df <- bind_rows(new_rows_list)
+
+# Add new rows to control_data
+control_data <- bind_rows(control_data, new_rows_df)
+
+# Print the updated dataset
+print(control_data)
+
+control_data <- control_data %>%
+  mutate(estimated.response = ifelse(trait %in% c("survival", "flowering"), estimated.response * 100, estimated.response))
+
+late_drought_data <- late_drought_data %>%
+  mutate(estimated.response = ifelse(trait %in% c("survival", "flowering"), estimated.response * 100, estimated.response))
+
+early_drought_data <- early_drought_data %>%
+  mutate(estimated.response = ifelse(trait %in% c("survival", "flowering"), estimated.response * 100, estimated.response))
+  
+
+```
+
+
+Merge control data with early drought and late drought data separately:
+
+```{r}
+
+merged_data_early <- early_drought_data %>%
+  inner_join(control_data, by = c("colors", "trait"))
+
+merged_data_late <- late_drought_data %>%
+  inner_join(control_data, by = c("colors", "trait"))
+
+# Calculate percent decrease from control to each treatment
+merged_data_early <- merged_data_early %>%
+  mutate(
+    percent_decrease_early_drought = ((estimated.response.y - estimated.response.x) / estimated.response.y) * 100
+  ) %>%
+  select(trait, colors, percent_decrease_early_drought) %>%
+  distinct()  # Keep only unique combinations of trait and color
+
+merged_data_late <- merged_data_late %>%
+  mutate(
+    percent_decrease_late_drought = ((estimated.response.y - estimated.response.x) / estimated.response.y) * 100
+  ) %>%
+  select(trait, colors, percent_decrease_late_drought) %>%
+  distinct()  # Keep only unique combinations of trait and color
+
+# Print the updated datasets
+print(merged_data_early)
+print(merged_data_late)
+
+```
+
+
+```{r}
+
+merged_data_early <- merged_data_early %>% 
+  rename(percent_decrease = percent_decrease_early_drought)
+
+merged_data_late <- merged_data_late %>% 
+  rename(percent_decrease = percent_decrease_late_drought)
+
+# Combine early and late drought data
+merged_data <- rbind(mutate(merged_data_early, treatment = "Early Drought"),
+                     mutate(merged_data_late, treatment = "Late Drought"))
+
+# convert % decrease values to negative
+
+merged_data$percent_decrease <- merged_data$percent_decrease*(-1)
+
+
+
+# Filter and rename traits
+merged_data_fitness <- merged_data %>%
+  filter(trait %in% c("survival", "flowering", "n flowers")) %>%
+  mutate(trait = factor(trait, levels = c("n flowers", "flowering","survival"),
+                        labels = c("Flower Count", "Flowering", "Survival")))
+
+
+# Filter and rename traits
+merged_data_other <- merged_data %>%
+  filter(trait %in% c("time to flower (days)","bushiness (n nodes)","height (cm)")) %>%
+  mutate(trait = factor(trait, levels = c("time to flower (days)","bushiness (n nodes)","height (cm)")))
+
+
+
+
+
+# Plot
+plot_change_fitness <- ggplot(merged_data_fitness, aes(x = trait, y = percent_decrease, shape = treatment, color = colors)) +
+  geom_point(data = subset(merged_data_fitness, treatment == "Late Drought"), 
+             position = position_nudge(x = -0.07), size = 3.5) +
+  geom_point(data = subset(merged_data_fitness, treatment == "Early Drought"), 
+             position = position_nudge(x = 0.07), size = 3.5) +
+  geom_segment(aes(x = trait, xend = trait, y = 0, yend = percent_decrease), color = "grey") +
+  coord_flip() +
+  theme_classic() +
+  theme(
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.position = "none"
+  ) +
+  xlab("") +
+   ylab(expression(paste("%", Delta, hat(beta), " change from control")))   +
+  scale_color_manual(values = c("#990099", "#FF6666", "gold")) +
+  scale_shape_manual(values = c("Early Drought" = 16, "Late Drought" = 17)) +
+  geom_hline(yintercept = 0, linetype = 'dotted', col = 'black', size = 0.7) +
+  my.theme
+
+
+
+plot_change_fitness
+
+#ggsave("../figures/perc.change_a.png", height = 4, width = 6.5)
+
+
+
+
+
+plot_change_others <- ggplot(merged_data_other, aes(x = trait, y = percent_decrease, shape = treatment, color = colors)) +
+  geom_point(data = subset(merged_data_other, treatment == "Late Drought"), 
+             position = position_nudge(x = -0.07), size = 3) +
+  geom_point(data = subset(merged_data_other, treatment == "Early Drought"), 
+             position = position_nudge(x = 0.07), size = 3) +
+  geom_segment(aes(x = trait, xend = trait, y = 0, yend = percent_decrease), color = "grey") +
+  coord_flip() +
+  theme_classic() +
+  theme(
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    legend.position = "none"
+  ) +
+  xlab("") +
+  ylab(expression(paste("%", Delta, hat(beta), " change from control"))) +
+  scale_color_manual(values = c("#990099", "#FF6666", "gold")) +
+  scale_shape_manual(values = c("Early Drought" = 16, "Late Drought" = 17)) +
+  geom_hline(yintercept = 0, linetype = 'dotted', col = 'black', size = 0.7) +
+  my.theme
+
+plot_change_others
+
+#ggsave("../figures/perc.change_b.png", height = 4, width = 6.5)
+
+
+```
+
+

@@ -1,0 +1,171 @@
+---
+title: "Risk death for flowering individuals"
+output: html_notebook
+---
+
+
+This script analyses the risk of death of individuals based on wether they flower or not, for both early and late drought treatment.
+
+
+“Risk” refers to the probability of occurrence of an event or outcome. Statistically, risk = chance of the outcome of interest/all possible outcomes.
+
+
+
+Load packages
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+library(reshape2)
+library(tidyverse)
+
+```
+
+
+Read data
+
+```{r}
+
+Dataset <- read.csv("../dataset.csv")
+
+
+Dataset <- Dataset %>% 
+  filter(w_b == "b",
+         trt != "control") 
+
+head(Dataset)
+
+```
+
+
+Parameters for plotting
+
+```{r}
+my.theme<-theme(axis.text=element_text(size=12),
+        axis.title = element_text(size = 14),
+        legend.text=element_text(size=10),
+        legend.title = element_text(size=12),
+        plot.title = element_text(face="bold",size=14,margin=margin(0,0,20,0),hjust = 0.5),
+        axis.title.y = element_text(margin = margin(t = 0, r = 15, b = 0, l = 0)),
+        axis.title.x = element_text(margin = margin(t = 15, r = 0, b = 0, l = 0)))
+
+```
+
+
+Compute risk death:
+
+```{r}
+
+df_risk_death <- Dataset %>%
+    group_by(trt, colors) %>%
+    summarise(
+      died_flowering = sum(survived == 0 & flowering == 1),
+      survived_flowering = sum(survived == 1 & flowering == 1),
+      died_non_flowering = sum(survived == 0 & flowering == 0),
+      survived_non_flowering = sum(survived == 1 & flowering == 0)
+    ) %>% 
+  mutate(
+    death_risk_flowering = died_flowering / (died_flowering + survived_flowering)*100,
+    death_risk_non_flowering = died_non_flowering / (died_non_flowering + survived_non_flowering) * 100
+  )
+
+df_risk_death
+
+
+```
+
+
+
+
+## test for significant differences between flowering and non-flowering groups
+
+We perform a two-groups proportion Z test to determine whether flowering vs non-flowering individuals of a given phenotype in a given treatment show significant differences in their % risk death.
+
+* In this test, the null hypothesis is that there exist no differences between the groups.
+
+Function to compute the 2 groups proportion test
+
+```{r}
+
+df_risk_death <- df_risk_death %>% 
+  rowwise() %>%
+  mutate(statistic = prop.test(x = c(died_flowering, died_non_flowering),
+                               n = c((died_flowering+survived_flowering), (died_non_flowering + survived_non_flowering)))$statistic,
+         
+         estimate = paste(round(prop.test(x = c(died_flowering, died_non_flowering),
+                               n = c((died_flowering+survived_flowering), (died_non_flowering + survived_non_flowering)))$estimate, digits = 2), collapse = " , "),
+         
+         pvalue = prop.test(x = c(died_flowering, died_non_flowering),
+                               n = c((died_flowering+survived_flowering), (died_non_flowering + survived_non_flowering)))$p.value)
+
+
+df_risk_death
+
+#write.csv(df_risk_death, "../tables/df_risk_death.csv")
+
+```
+
+
+
+
+## Plot results
+
+```{r}
+
+
+death_risk_long <- df_risk_death %>%
+  select(trt, colors, death_risk_flowering, death_risk_non_flowering) %>%
+  pivot_longer(cols = c(death_risk_flowering, death_risk_non_flowering),
+               names_to = "flowering",
+               values_to = "death_risk") %>%
+  mutate(flowering = if_else(flowering == "death_risk_flowering", "flowering", "non-flowering"))
+
+
+# Plot using ggdotchart with facet_wrap
+ggplot(death_risk_long, aes(x = flowering, y = death_risk, fill = colors, color = colors)) +
+  geom_dotplot(binaxis = "y", stackdir = "center", position = position_dodge(width = 0.4), binwidth = 3.5) +
+  facet_wrap(~ trt, scales = "free_x", nrow = 1) +
+  scale_fill_manual(values = c("M_Y" = "#FF6666", "M_M" = "#990099", "Y_Y" = "gold")) +
+  scale_color_manual(values = c("M_Y" = "#FF6666", "M_M" = "#990099", "Y_Y" = "gold")) +
+  labs(x = NULL, y = "% Death Risk", fill = "Colors", color = "Colors") +  # Remove x-axis label and update color legends
+  theme_classic() +
+  theme(strip.text = element_text(size = 12))+
+  my.theme
+
+#ggsave("../figures/death_risk.png", height = 4, width = 6)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
