@@ -1,4 +1,4 @@
-![image](https://github.com/Alex-Fuster/hybrids_drought/assets/73120146/d0d2e438-b0aa-482c-b2c3-e9abbdc7624b)# Reduced fitness under abiotic stress in F1 hybrids of Antirrhinum majus subspecies with divergent flower colors
+# Reduced fitness under abiotic stress in F1 hybrids of Antirrhinum majus subspecies with divergent flower colors
 **Alexandre Fuster-Calvo, Coline C. Jaworski, Carina Basket**
 
 ## ABSTRACT
