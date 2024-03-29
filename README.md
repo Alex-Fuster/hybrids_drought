@@ -63,5 +63,5 @@ FOLDERS:
 - initial_h: height when transplanted into greenhouse pots.
 
 
-For any inquiries, please reach out to alexfuster7@gmail.com or cbaskett3@gatech.edu
+For any inquiries, please reach out to alexfuster7@gmail.com or cabaskett@gmail.com
 
