@@ -1,4 +1,7 @@
 # Reduced fitness under abiotic stress in F1 hybrids of Antirrhinum majus subspecies with divergent flower colors
+**Alexandre Fuster-Calvo, Coline C. Jaworski, Carina Basket**
+
+  [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10892525.svg)](https://doi.org/10.5281/zenodo.10892525)
 
 ## ABSTRACT
 
@@ -13,7 +16,7 @@ FOLDERS:
 - **`tables/`** tables of the manuscript produced in the code
 - **`scripts/`**:
 
-    - *compute_dataset.Rmd*: it builts the dataset **dataset.csv** used for all the analyses from raw data in the **data** folder.
+    - *compute_dataset_analyses.Rmd*: it builts the dataset **dataset.csv** used for all the analyses from raw data in the **data** folder.
 
     - *mixed_models_treatment.color.Rmd*: it runs models to analyze the effects of flower color and treatment on trait responses. It produces Figure 1 and S2.
 
@@ -58,5 +61,7 @@ FOLDERS:
 - pop_P: whether any parent belongs to population O.
 - pop_L: whether any parent belongs to population L.
 - initial_h: height when transplanted into greenhouse pots.
-    
+
+
+For any inquiries, please reach out to alexfuster7@gmail.com or cabaskett@gmail.com
 
