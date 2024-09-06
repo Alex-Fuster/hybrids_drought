@@ -117,14 +117,14 @@ merged_data_early <- merged_data_early %>%
   mutate(
     percent_decrease_early_drought = ((estimated.response.y - estimated.response.x) / estimated.response.y) * 100
   ) %>%
-  select(trait, colors, percent_decrease_early_drought) %>%
+  dplyr::select(trait, colors, percent_decrease_early_drought) %>%
   distinct()  # Keep only unique combinations of trait and color
 
 merged_data_late <- merged_data_late %>%
   mutate(
     percent_decrease_late_drought = ((estimated.response.y - estimated.response.x) / estimated.response.y) * 100
   ) %>%
-  select(trait, colors, percent_decrease_late_drought) %>%
+  dplyr::select(trait, colors, percent_decrease_late_drought) %>%
   distinct()  # Keep only unique combinations of trait and color
 
 # Print the updated datasets
@@ -165,7 +165,10 @@ merged_data_other <- merged_data %>%
   mutate(trait = factor(trait, levels = c("time to flower (days)","bushiness (n nodes)","height (cm)")))
 
 
-
+merged_data_fitness$trait <- factor(merged_data_fitness$trait,
+  levels = c("Flower Count", "Flowering", "Survival"),
+  labels = c("flower count\n(survivors)", "flowering\n(all plants)", "survival")
+)
 
 
 # Plot

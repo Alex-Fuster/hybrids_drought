@@ -13,31 +13,56 @@ Load packages
 
 
 ## load required packages
-pkgs <- c("lme4", "arm", "multcomp", "nlme", 
-          "lsmeans", "tidyverse","nlme", "tidyverse", 
-          "ResourceSelection", "dplyr","effsize","hrbrthemes", 
-          "viridis", "plyr", "cowplot", "aods3", 
-          "AER", "pscl","DHARMa", "plotly", "ggpubr", 
-          "extrafont","car", "rcompanion", "agricolae",
-          "jtools", "sjPlot", "VGAM", "pracma", "rgl",
-          "MASS", "performance", 
+pkgs <- c("lme4", 
+           
+          "multcomp", 
+           
+          "lsmeans", 
+          "tidyverse",
+          
+          "tidyverse", 
+          "dplyr",
+          #"effsize",
+          #"hrbrthemes", 
+          "viridis", 
+          #"plyr", 
+         # "cowplot", 
+         # "aods3", 
+         # "AER", 
+         # "pscl",
+          "DHARMa", 
+         # "plotly",
+          "ggpubr", 
+         # "extrafont",
+          "car", 
+          "rcompanion", 
+         # "agricolae",
+        #  "jtools", 
+        #  "sjPlot", 
+         # "VGAM", 
+         # "pracma",
+        #  "rgl",
+          "MASS", 
+         # "performance", 
          # "brms", 
-          "sjstats", 
-          "sjmisc",
+        #  "sjstats", 
+        #  "sjmisc",
          #"lmerTest",
          #"rockchalk",
           "emmeans", 
          #"afex",
          #"effects",
          "forcats", 
-          "visreg", "rstatix", 
+      #    "visreg", 
+      #  "rstatix", 
          #"lmerTest",
           #"ggstance", 
          #"broomExtra",
-         "dplyr", "grid",
+     # "grid",
          "glmmTMB",
-         "ggeffects",
-         "patchwork")
+      #   "ggeffects",
+         "patchwork"
+     )
 
 
 lapply(pkgs, library, character.only = TRUE)
@@ -272,7 +297,7 @@ surv_emmeans_cld <- multcomp::cld(object = marginal_surv1.1,
 
 surv_emmeans_cld <- surv_emmeans_cld %>% 
   arrange(colors) %>% 
-  select(trt, .group, colors)
+  dplyr::select(trt, .group, colors)
 
 
 back.emmeans_surv <- left_join(back.emmeans_surv, surv_emmeans_cld, by = c("trt","colors"))
@@ -400,7 +425,7 @@ surv_emmeans_cld <- multcomp::cld(object = marginal_surv1.1,
 
 surv_emmeans_cld <- surv_emmeans_cld %>% 
   arrange(colors) %>% 
-  select(.group, colors)
+  dplyr::select(.group, colors)
 
 
 back.emmeans_surv <- left_join(back.emmeans_surv, surv_emmeans_cld, by = c("colors"))
@@ -524,7 +549,7 @@ flow_emmeans_cld <- multcomp::cld(object = emmeans_flowering,
 
 flow_emmeans_cld <- flow_emmeans_cld %>% 
   arrange(trt, colors) %>% 
-  select(.group, colors, trt)
+  dplyr::select(.group, colors, trt)
 
 
 back.emmeans_flowering <- left_join(back.emmeans_flowering, flow_emmeans_cld, by = c("trt", "colors"))
@@ -641,7 +666,7 @@ flow_emmeans_cld <- multcomp::cld(object = emmeans_flowering,
 
 flow_emmeans_cld <- flow_emmeans_cld %>% 
   arrange(colors) %>% 
-  select(.group, colors)
+  dplyr::select(.group, colors)
 
 
 back.emmeans_flowering <- left_join(back.emmeans_flowering, flow_emmeans_cld, by = "colors")
@@ -757,7 +782,7 @@ flow_emmeans_cld <- multcomp::cld(object = emmeans_flowering,
 
 flow_emmeans_cld <- flow_emmeans_cld %>% 
   arrange(trt) %>% 
-  select(.group, trt)
+  dplyr::select(.group, trt)
 
 
 back.emmeans_flowering <- left_join(back.emmeans_flowering, flow_emmeans_cld, by = "trt")
@@ -879,7 +904,7 @@ nflow_emmeans_cld <- multcomp::cld(object = marginal_nf.d,
 
 nflow_emmeans_cld <- nflow_emmeans_cld %>% 
   arrange(trt, colors) %>% 
-  select(.group, colors, trt)
+  dplyr::select(.group, colors, trt)
 
 
 back.emmeans_nflow <- left_join(back.emmeans_nflow, nflow_emmeans_cld, by = c("trt", "colors"))
@@ -943,7 +968,7 @@ nflow_overlay_plot <- nflow_raw +
  #   size = 4
 #  ) +
     scale_fill_manual(values=c("#990099", "#FF6666", "gold"))+
-  scale_color_manual(values=c("black", "#990099", "#FF6666", "gold"),labels = c("raw data", "pseudomajus", "F1 hybrid", "striatum"))+
+  scale_color_manual(values=c("#990099", "#FF6666", "gold","black"),labels = c("raw data", "pseudomajus", "F1 hybrid", "striatum"))+
   theme_classic()+
   my_theme+
 guides(fill = FALSE)+
@@ -994,7 +1019,7 @@ nflow_emmeans_cld <- multcomp::cld(object = marginal_nf.d,
 
 nflow_emmeans_cld <- nflow_emmeans_cld %>% 
   arrange(colors) %>% 
-  select(.group, colors)
+  dplyr::select(.group, colors)
 
 
 back.emmeans_nflow <- left_join(back.emmeans_nflow, nflow_emmeans_cld, by =  "colors")
@@ -1101,7 +1126,7 @@ nflow_emmeans_cld <- multcomp::cld(object = marginal_nf.d,
 
 nflow_emmeans_cld <- nflow_emmeans_cld %>% 
   arrange(trt) %>% 
-  select(.group, trt)
+  dplyr::select(.group, trt)
 
 
 back.emmeans_nflow <- left_join(back.emmeans_nflow, nflow_emmeans_cld, by =  "trt")
@@ -1247,7 +1272,7 @@ height_overlay_plot <- height_raw +
     size = 4
   ) +
     scale_fill_manual(values=c("#990099", "#FF6666", "gold"))+
-  scale_color_manual(values=c("black", "#990099", "#FF6666", "gold"),labels = c("raw data", "pseudomajus", "F1 hybrid", "striatum"))+
+  scale_color_manual(values=c("#990099", "#FF6666", "gold","black"),labels = c("raw data", "pseudomajus", "F1 hybrid", "striatum"))+
   theme_classic()+
   my_theme+
 guides(fill = FALSE)+
@@ -1287,7 +1312,7 @@ emmeans_bush_cld <- multcomp::cld(object = emmeans_bush,
 
 emmeans_bush_cld <- emmeans_bush_cld %>% 
   arrange(trt, colors) %>% 
-  select(.group, colors, trt)
+  dplyr::select(.group, colors, trt)
 
 
 back.emmeans_bush <- left_join(back.emmeans_bush, emmeans_bush_cld, by = c("trt", "colors"))
@@ -1350,7 +1375,7 @@ bushiness_overlay_plot <- bush_raw +
     size = 4
   ) +
     scale_fill_manual(values=c("#990099", "#FF6666", "gold"))+
-  scale_color_manual(values=c("black", "#990099", "#FF6666", "gold"),labels = c("raw data", "pseudomajus", "F1 hybrid", "striatum"))+
+  scale_color_manual(values=c("#990099", "#FF6666", "gold","black"),labels = c("raw data", "pseudomajus", "F1 hybrid", "striatum"))+
   theme_classic()+
   my_theme+
 guides(fill = FALSE)+
@@ -1392,7 +1417,7 @@ emmeans_tflow_cld <- multcomp::cld(object = emmeans_tflow,
 
 emmeans_tflow_cld <- emmeans_tflow_cld %>% 
   arrange(trt, colors) %>% 
-  select(.group, colors, trt)
+  dplyr::select(.group, colors, trt)
 
 
 back.emmeans_tflow <- left_join(back.emmeans_tflow, emmeans_tflow_cld, by = c("trt", "colors"))
@@ -1455,7 +1480,7 @@ tflow_overlay_plot <- tflow_raw +
     size = 4
   ) +
     scale_fill_manual(values=c("#990099", "#FF6666", "gold"))+
-  scale_color_manual(values=c("black", "#990099", "#FF6666", "gold"),labels = c("raw data", "pseudomajus", "F1 hybrid", "striatum"))+
+  scale_color_manual(values=c("#990099", "#FF6666", "gold","black"),labels = c("raw data", "pseudomajus", "F1 hybrid", "striatum"))+
   theme_classic()+
   my_theme+
 guides(fill = FALSE)+
@@ -1508,12 +1533,14 @@ figure1 <- ggarrange(
   surv_overlay_plot2 + ylab(NULL) + plot_spacer(),
   
   flow_overlay_plot+
+    ylab("flowering prob.(all plants)")+
   theme(axis.title.y = element_text(margin = margin(r = 10)))+
    scale_x_discrete(guide = guide_axis(n.dodge=2)), 
   
   arranged_flowering_coltrt,
   
   nflow_overlay_plot+
+    ylab("flower count (survivors)")+
   theme(axis.title.y = element_text(margin = margin(r = 10)))+
    scale_x_discrete(guide = guide_axis(n.dodge=2)), 
  
@@ -1530,7 +1557,7 @@ figure1 <- ggarrange(
 
 figure1
 
-ggsave("../figures/figure1_test.png", height = 9, width = 10)
+ggsave("../figures/figure1.png", height = 10, width = 10)
 
 
 ```

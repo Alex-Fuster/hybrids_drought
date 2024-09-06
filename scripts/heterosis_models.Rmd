@@ -1,0 +1,839 @@
+---
+title: "Heterosis effect"
+---
+
+
+```{r}
+library("glmmTMB")
+library("dplyr")
+library("DHARMa")
+library("ggplot2")
+library("ggpubr")
+library("tidyverse")
+library("lme4")
+library("emmeans")
+```
+
+parameters for plotting
+
+```{r}
+my_theme<-theme(axis.text=element_text(size=12),
+        axis.title = element_text(size = 14),
+        legend.text=element_text(size=10),
+        legend.title = element_text(size=12),
+        plot.title = element_text(face="bold",size=14,margin=margin(0,0,20,0),hjust = 0.5),
+        axis.title.y = element_text(hjust = 0.5),
+        axis.title.x = element_text(hjust = 0.5))
+```
+
+
+Read data
+
+```{r}
+Dataset <- read.csv(here::here("dataset.csv"))
+
+# Set random effects as factors
+
+Dataset$block <- as.factor(Dataset$block)
+Dataset$cross <- as.factor(Dataset$cross)
+
+Dataset$bushiness[Dataset$bushiness==0] <- NA
+
+# to test heterosis, we discard hybrids
+
+Dataset <-subset(Dataset, Dataset$colors != "M_Y") 
+
+Dataset <- Dataset |> 
+  rename(heterosis = w_b)
+
+head(Dataset)
+```
+
+Create a dataset excluding control to run the survival model:
+
+```{r}
+Dataset_nc<-subset(Dataset, Dataset$trt != "control") #Dataset used for the model with survival as response variable
+```
+
+```{r}
+glmer_surv_nc <- glmmTMB(survived~ trt + heterosis + trt:heterosis + (1|block) +(1|cross), family = "binomial", data = 
+                         Dataset_nc)
+
+glmer_f <- glmmTMB(flowering~trt + heterosis + trt:heterosis + (1|block) +(1|cross), family = "binomial", data = Dataset)
+
+glmer_nf_d <- glmmTMB(flower_count ~ trt + heterosis + trt:heterosis, data = Dataset, family = "nbinom2")
+
+
+lmer_height<-lmer(height_cm~trt + heterosis + trt:heterosis + (1|block) +(1|cross), Dataset, na.action=na.exclude)
+lmer_height.o<-lmer(height_cm~trt + heterosis + trt:heterosis + (1|block)+(1|cross), Dataset, na.action=na.omit) # This model only changes the na.action because packages used for diagnostics cant handle na.exclude() and some plotting functions handle na.omit() better. This does not affect any estimate and both models are equivalent as both na.exclude and na.omit remove the row where any of the dependent or independent variable is missing
+
+glmer_bush <- glmmTMB(bushiness~ trt + heterosis + trt:heterosis + (1|block)+(1|cross), data = Dataset, family = "poisson")
+
+
+glmer_tf <- glmmTMB(days_1flower~trt + heterosis + trt:heterosis + (1|block) +(1|cross), family = "nbinom2", data = Dataset)
+```
+
+
+## Model evaluations
+
+```{r}
+
+# Survival
+
+simulationOutput_surv_d<-simulateResiduals(glmer_surv_nc) 
+dharma_plot_surv<-plot(simulationOutput_surv_d)
+surv_dharma<-testResiduals(simulationOutput_surv_d)
+
+
+# Flowering
+
+simulationOutput_flow<-simulateResiduals(glmer_f) 
+dharma_plot_flow<-plot(simulationOutput_flow)
+flow_dharma<-testResiduals(simulationOutput_flow) 
+
+
+# flower_count
+
+
+simulationOutput_nflow<-simulateResiduals(glmer_nf_d) 
+dharma_plot_nflow<-plot(simulationOutput_nflow)
+
+
+
+# Height
+
+simulationOutput_height_d<-simulateResiduals(lmer_height.o)
+dharma_plot_height<-plot(simulationOutput_height_d)
+height_dharma<-testResiduals(simulationOutput_height_d)
+
+
+# Bushiness
+
+simulationOutput_bush_d<-simulateResiduals(glmer_bush)
+dharma_plot_bush<-plot(simulationOutput_bush_d)
+bush_dharma<-testResiduals(simulationOutput_bush_d) 
+
+
+# t flower
+
+simulationOutput_tflow_d<-simulateResiduals(glmer_tf)
+dharma_plot_tflow<-plot(simulationOutput_tflow_d)
+tflow_dharma<-testResiduals(simulationOutput_tflow_d)
+
+
+```
+
+
+## Summary Anova tables
+
+```{r}
+
+s_surv<-car::Anova(glmer_surv_nc,type="II")
+s_flow<-car::Anova(glmer_f,type="II")
+s_nflow<-car::Anova(glmer_nf_d,type="II")
+s_height<-car::Anova(lmer_height,type="III")
+s_bush<-car::Anova(glmer_bush,type="III")
+s_tflow<-car::Anova(glmer_tf,type="III")
+#s_iheight<-car::Anova(lm_iheight_col,type="III")
+
+options(scipen = 999)
+
+surv<-as.data.frame(s_surv)
+colnames(surv)[1] <- "Chisq"
+surv <- cbind(surv,rep("survival", nrow(surv)))
+colnames(surv)[ncol(surv)] = "trait"
+
+flow<-as.data.frame(s_flow)
+colnames(flow)[1] <- "Chisq"
+flow <- cbind(flow,rep("flowering", nrow(flow)))
+colnames(flow)[ncol(flow)] = "trait"
+
+
+nflow<-as.data.frame(s_nflow)
+nflow <- cbind(nflow,rep("n flowers", nrow(nflow)))
+colnames(nflow)[ncol(nflow)] = "trait"
+
+
+height<-as.data.frame(s_height)
+height <- cbind(height,rep("height", nrow(height)))
+colnames(height)[ncol(height)] = "trait"
+
+
+bush<-as.data.frame(s_bush)
+bush <- cbind(bush,rep("bushiness", nrow(bush)))
+colnames(bush)[ncol(bush)] = "trait"
+
+
+tflow<-as.data.frame(s_tflow)
+colnames(tflow)[1] <- "Chisq"
+tflow <- cbind(tflow,rep("time to flower", nrow(tflow)))
+colnames(tflow)[ncol(tflow)] = "trait"
+
+
+#iheight<-as.data.frame(s_iheight)
+
+df_anovas <- rbind(surv,
+      flow,
+      nflow,
+      tflow,
+      height,
+      bush)
+
+df_anovas$"Pr(>Chisq)"<- round(df_anovas$"Pr(>Chisq)", 4)
+df_anovas$"Chisq"<- round(df_anovas$"Chisq", 2)
+
+df_anovas
+
+#write.csv(df_anovas, here::here("tables/df_anovas_heterosis.csv"))
+
+```
+
+
+## Group comparisons of predicted means & plotting
+
+
+Plotting settings
+
+```{r}
+
+pd = position_dodge(0.9)
+alpha_raw_points = 0.15
+
+trt_order <- c("control", "early drought", "late drought")
+
+Dataset$trt <- factor(Dataset$trt,
+    levels = trt_order,ordered = TRUE)
+
+```
+
+
+### ----- Survival - all levels
+
+Compute emmeans and CI
+
+```{r}
+
+marginal_surv1.1 = emmeans(glmer_surv_nc,
+                   ~ heterosis:trt,  calc = c(n = ".wgt."))
+
+back.emmeans_surv<-confint(marginal_surv1.1, type = "response")
+
+```
+Add letter display from tukey tests
+
+```{r}
+
+
+surv_emmeans_cld <- multcomp::cld(object = marginal_surv1.1,
+                           Letters = letters)
+
+
+surv_emmeans_cld <- surv_emmeans_cld %>% 
+  arrange(heterosis) %>% 
+  select(trt, .group, heterosis)
+
+
+back.emmeans_surv <- left_join(back.emmeans_surv, surv_emmeans_cld, by = c("trt","heterosis"))
+
+back.emmeans_surv
+
+```
+
+
+```{r}
+
+
+Dataset_percentage <- aggregate(survived ~ trt + heterosis, data = Dataset, FUN = mean)
+
+Dataset_percentage$trt <- factor(Dataset_percentage$trt,
+   levels = trt_order,ordered = TRUE)
+
+
+
+# Plotting raw data points
+surv_raw <- ggdotchart(
+  Dataset_percentage, 
+  x = "trt", 
+  y = "survived",
+  color = "heterosis", 
+  palette = c("black", "black"), 
+  alpha = 0.3,
+  size = 5, 
+  shape = 21,
+  #add = "segment", 
+  #add.params = list(color = "lightgray", size = 1.3),
+  position = position_dodge(0.6),
+  ggtheme = theme_classic(),
+  sorting = "none",
+  order = trt_order
+)
+
+# Overlay emmeans and CI on the raw data plot
+surv_overlay_plot <- surv_raw +
+  geom_errorbar(
+    data = back.emmeans_surv,
+    aes(
+      x = trt, #factor(trt, levels = trt_order), 
+      y = prob,  # Assuming prob is the probability in decimal form
+      ymin = asymp.LCL,
+      ymax = asymp.UCL,
+      color = heterosis
+    ),
+    position = position_dodge(width = 0.6),
+    width = 0.3,
+    size = 1
+  ) +
+  geom_point(
+    data = back.emmeans_surv,
+    aes(
+      x = trt, #factor(trt, levels = trt_order), 
+      y = prob,  # Assuming prob is the probability in decimal form
+      color = heterosis
+    ),
+    position = position_dodge(width = 0.6),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+  ) +
+ #geom_text(
+  #  data = back.emmeans_surv,
+  #  aes(
+  #    x = trt, # Adjust position based on factor levels,
+  #    color = heterosis,
+  #    y = asymp.UCL + 0.02,  # Adjust the position of the letters
+ #     label = .group  # Use the .group column for labels
+ #   ),
+ #   position = position_dodge(width = 0.6),
+ #   vjust = -0.5,  # Adjust vertical position
+ #   size = 4
+ # ) +
+  scale_fill_manual(values = c("red", "blue")) +
+  scale_color_manual(
+    values = c("red", "blue"),  # Remove black color
+    labels = c("between populations", "within populations")  # Update labels
+  ) +
+  ylim(0,1.05)+
+  theme_classic() +
+  my_theme +
+  guides(fill = FALSE) +
+  labs(color = "cross") +
+#  theme(legend.position = "none") +
+  xlab(NULL) +
+  ylab("survival probability") +
+  theme(axis.title.y = element_text(margin = margin(r = 10)))
+
+
+surv_overlay_plot
+
+
+
+
+
+```
+
+
+### ----- Flowering - All levels
+
+
+Compute emmeans and CI
+
+```{r}
+emmeans_flowering = emmeans(glmer_f,
+                   ~ heterosis:trt,  calc = c(n = ".wgt."))
+
+back.emmeans_flowering<-confint(emmeans_flowering, type = "response")
+
+```
+
+Add letter display from tukey tests
+
+```{r}
+
+
+flow_emmeans_cld <- multcomp::cld(object = emmeans_flowering,
+                           Letters = letters)
+
+flow_emmeans_cld <- flow_emmeans_cld %>% 
+  arrange(trt, heterosis) %>% 
+  select(.group, heterosis, trt)
+
+
+back.emmeans_flowering <- left_join(back.emmeans_flowering, flow_emmeans_cld, by = c("trt", "heterosis"))
+
+back.emmeans_flowering
+
+```
+
+
+```{r}
+
+Dataset_percentage <- aggregate(flowering ~ trt + heterosis, data = Dataset, FUN = mean)
+
+
+# Plotting raw data points
+flow_raw <- ggdotchart(
+  Dataset_percentage, 
+  x = "trt", 
+  y = "flowering",
+  color = "heterosis", 
+  palette = c("black", "black", "black"), 
+  alpha = 0.3,
+  size = 5, 
+  shape = 21,
+  #add = "segment", 
+  #add.params = list(color = "lightgray", size = 1.3),
+  position = position_dodge(0.6),
+  ggtheme = theme_classic(),
+    sorting = "none",
+  order = trt_order
+)
+
+# Overlay emmeans and CI on the raw data plot
+flow_overlay_plot <- flow_raw +
+  geom_errorbar(
+    data = back.emmeans_flowering,
+    aes(
+      x = trt, #factor(trt, levels = c(trt_order)), 
+      y = prob,  # Assuming prob is the probability in decimal form
+      ymin = asymp.LCL,
+      ymax = asymp.UCL,
+      color = heterosis
+    ),
+    position = position_dodge(width = 0.6),
+    width = 0.3,
+    size = 1
+  ) +
+  geom_point(
+    data = back.emmeans_flowering,
+    aes(
+      x = trt, #factor(trt, levels = c(trt_order)), 
+      y = prob,  # Assuming prob is the probability in decimal form
+      color = heterosis
+    ),
+    position = position_dodge(width = 0.6),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+  ) +
+ # geom_text(
+ #   data = back.emmeans_flowering,
+ #   aes(
+ #     x = trt, # Adjust position based on factor levels,
+  #    color = heterosis,
+  #    y = asymp.UCL + 0.02,  # Adjust the position of the letters
+  #    label = .group  # Use the .group column for labels
+ #   ),
+ #   position = position_dodge(width = 0.6),
+ #   vjust = -0.5,  # Adjust vertical position
+ #   size = 4
+#  ) +
+ scale_fill_manual(values = c("red", "blue")) +
+  scale_color_manual(
+    values = c("red", "blue"),  # Remove black color
+    labels = c("between populations", "within populations")  # Update labels
+  ) +
+  ylim(0, 1.05)+
+  theme_classic() +
+  my_theme +
+  guides(fill = FALSE) +
+  labs(color = "cross") +
+ # theme(legend.position = "none")+
+  xlab(NULL) +
+  ylab("flowering prob. (all plants)") +
+  theme(axis.title.y = element_text(margin = margin(r = 10)))
+
+
+flow_overlay_plot
+
+```
+
+
+
+### ----- N flowers - All levels
+
+Compute emmeans and CI
+
+
+```{r}
+### N flowers (1 drought level) - treatment significant
+
+marginal_nf.d = emmeans(glmer_nf_d,
+                   ~ heterosis:trt,  calc = c(n = ".wgt."))
+
+back.emmeans_nflow<-confint(marginal_nf.d, type = "response")
+
+
+back.emmeans_nflow[which(is.infinite(back.emmeans_nflow$asymp.UCL)),"asymp.UCL"] <- 0
+
+```
+
+
+
+Add letter display from tukey tests
+
+```{r}
+
+
+nflow_emmeans_cld <- multcomp::cld(object = marginal_nf.d,
+                           Letters = letters)
+
+nflow_emmeans_cld <- nflow_emmeans_cld %>% 
+  arrange(trt, heterosis) %>% 
+  select(.group, heterosis, trt)
+
+
+back.emmeans_nflow <- left_join(back.emmeans_nflow, nflow_emmeans_cld, by = c("trt", "heterosis"))
+
+back.emmeans_nflow
+
+```
+
+
+
+
+
+```{r}
+
+
+nflow_raw <- ggplot(Dataset, aes(x = trt, y = flower_count, group = heterosis)) +
+  geom_jitter(
+    aes(color = "black", fill = "black"),
+    position = position_jitterdodge(0.08),
+    size = 1.2,
+    alpha = alpha_raw_points
+  ) +
+  scale_fill_manual(values=c("black", "black"))+
+  scale_color_manual(values=c("black", "black"))+
+  theme_classic() +
+  my_theme
+
+
+
+
+# Overlay emmeans and CI on the raw data plot
+nflow_overlay_plot <- ggplot(Dataset, aes(x = trt, y = flower_count, group = heterosis)) +
+  geom_jitter(
+    aes(color = heterosis, fill = heterosis),
+    position = position_jitterdodge(0.08),
+    size = 1.2,
+    alpha = alpha_raw_points
+  ) +
+  geom_errorbar(
+    data = back.emmeans_nflow,
+    aes(x = trt, y = response, ymin = asymp.LCL, ymax = asymp.UCL, color = heterosis),
+    position = position_dodge(width = 0.75),
+    width = 0.3,
+    size = 1
+  ) +
+  geom_point(
+    data = back.emmeans_nflow,
+    aes(x = trt, y = response, color = heterosis),
+    position = position_dodge(width = 0.75),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+  ) +
+  # Define the scales only once
+  scale_color_manual(
+    values = c("red", "blue"),
+    labels = c("between populations", "within populations")
+  ) +
+  scale_fill_manual(
+    values = c("red", "blue")
+  ) +
+  theme_classic() +
+  my_theme +
+  guides(fill = FALSE) +
+  labs(color = "cross") +
+  xlab(NULL) +
+  ylab("flower count (survivors)") +
+  theme(axis.title.y = element_text(margin = margin(r = 10)))
+
+nflow_overlay_plot
+
+
+```
+
+
+
+### ----- Height
+
+
+```{r}
+
+emmeans_height = emmeans(lmer_height,
+                   ~ heterosis:trt,  calc = c(n = ".wgt."))
+
+emmeans_height <- multcomp::cld(object = emmeans_height,
+                                   Letters = letters)
+
+```
+
+
+
+
+RAW DATA
+
+
+
+```{r}
+
+
+# Define the base plot with jitter for raw data
+height_raw <- ggplot(Dataset, aes(x = trt, y = height_cm, group = heterosis)) +
+  geom_jitter(
+    aes(color = heterosis, fill = heterosis),
+    position = position_jitterdodge(0.08),
+    size = 1.2,
+    alpha = alpha_raw_points
+  ) +
+  theme_classic() +
+  my_theme
+
+# Overlay emmeans and CI on the raw data plot
+height_overlay_plot <- height_raw +
+  geom_errorbar(
+    data = emmeans_height,
+    aes(x = trt, y = emmean, ymin = lower.CL, ymax = upper.CL, color = heterosis),
+    position = position_dodge(width = 0.75),
+    width = 0.3,
+    size = 1
+  ) +
+  geom_point(
+    data = emmeans_height,
+    aes(x = trt, y = emmean, color = heterosis),
+    position = position_dodge(width = 0.75),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+  ) +
+  # Define the scales only once
+  scale_color_manual(
+    values = c("red", "blue"),
+    labels = c("between populations", "within populations")
+  ) +
+  scale_fill_manual(
+    values = c("red", "blue")
+  ) +
+  theme_classic() +
+  my_theme +
+  guides(fill = FALSE) +
+  labs(color = "cross") +
+  xlab(NULL) +
+  ylab("height (cm)") +
+  theme(axis.title.y = element_text(margin = margin(r = 10)))
+
+height_overlay_plot
+
+
+```
+
+
+### ----- Bushiness
+
+Compute emmeans and CI
+
+```{r}
+emmeans_bush = emmeans(glmer_bush,
+                   ~ heterosis:trt,  calc = c(n = ".wgt."))
+
+back.emmeans_bush<-confint(emmeans_bush, type = "response")
+
+
+```
+
+
+Add letter display from tukey tests
+
+```{r}
+
+emmeans_bush_cld <- multcomp::cld(object = emmeans_bush,
+                                   Letters = letters)
+
+emmeans_bush_cld <- emmeans_bush_cld %>% 
+  arrange(trt, heterosis) %>% 
+  select(.group, heterosis, trt)
+
+
+back.emmeans_bush <- left_join(back.emmeans_bush, emmeans_bush_cld, by = c("trt", "heterosis"))
+
+back.emmeans_bush
+
+```
+
+
+
+
+```{r}
+
+
+# Define the base plot with jitter for raw data
+bush_raw <- ggplot(Dataset, aes(x = trt, y = bushiness, group = heterosis)) +
+  geom_jitter(
+    aes(color = heterosis, fill = heterosis),
+    position = position_jitterdodge(0.08),
+    size = 1.2,
+    alpha = alpha_raw_points
+  ) +
+  theme_classic() +
+  my_theme
+
+# Overlay emmeans and CI on the raw data plot
+bushiness_overlay_plot <- bush_raw +
+  geom_errorbar(
+    data = back.emmeans_bush,
+    aes(x = trt, y = rate, ymin = asymp.LCL, ymax = asymp.UCL, color = heterosis),
+    position = position_dodge(width = 0.75),
+    width = 0.3,
+    size = 1
+  ) +
+  geom_point(
+    data = back.emmeans_bush,
+    aes(x = trt, y = rate, color = heterosis),
+    position = position_dodge(width = 0.75),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+  ) +
+  # Define the scales only once
+  scale_color_manual(
+    values = c("red", "blue"),
+    labels = c("between populations", "within populations")
+  ) +
+  scale_fill_manual(
+    values = c("red", "blue")
+  ) +
+  theme_classic() +
+  my_theme +
+  guides(fill = FALSE) +
+  labs(color = "cross") +
+  xlab(NULL) +
+  ylab("bushiness (n nodes)") +
+  theme(axis.title.y = element_text(margin = margin(r = 10)))
+
+bushiness_overlay_plot
+
+
+
+```
+
+
+### ----- Time to flower
+
+
+Compute emmeans and CI
+
+```{r}
+emmeans_tflow = emmeans(glmer_tf,
+                   ~ heterosis:trt,  calc = c(n = ".wgt."))
+
+back.emmeans_tflow<-confint(emmeans_tflow, type = "response")
+
+```
+
+
+Add letter display from tukey tests
+
+```{r}
+
+emmeans_tflow_cld <- multcomp::cld(object = emmeans_tflow,
+                                   Letters = letters)
+
+emmeans_tflow_cld <- emmeans_tflow_cld %>% 
+  arrange(trt, heterosis) %>% 
+  select(.group, heterosis, trt)
+
+
+back.emmeans_tflow <- left_join(back.emmeans_tflow, emmeans_tflow_cld, by = c("trt", "heterosis"))
+
+back.emmeans_tflow
+
+```
+
+
+
+
+
+
+```{r}
+# Define the base plot with jitter for raw data
+tflow_raw <- ggplot(Dataset, aes(x = trt, y = days_1flower, group = heterosis)) +
+  geom_jitter(
+    aes(color = heterosis, fill = heterosis),
+    position = position_jitterdodge(0.08),
+    size = 1.2,
+    alpha = alpha_raw_points
+  ) +
+  theme_classic() +
+  my_theme
+
+# Overlay emmeans and CI on the raw data plot
+tflow_overlay_plot <- tflow_raw +
+  geom_errorbar(
+    data = back.emmeans_tflow,
+    aes(x = trt, y = response, ymin = asymp.LCL, ymax = asymp.UCL, color = heterosis),
+    position = position_dodge(width = 0.75),
+    width = 0.3,
+    size = 1
+  ) +
+  geom_point(
+    data = back.emmeans_tflow,
+    aes(x = trt, y = response, color = heterosis),
+    position = position_dodge(width = 0.75),
+    size = 3,
+    alpha = 0.5,
+    shape = 15
+  ) +
+  # Define the scales only once
+  scale_color_manual(
+    values = c("red", "blue"),
+    labels = c("between populations", "within populations")
+  ) +
+  scale_fill_manual(
+    values = c("red", "blue")
+  ) +
+  theme_classic() +
+  my_theme +
+  guides(fill = FALSE) +
+  labs(color = "cross") +
+ # ylim(38, 95) +
+  xlab(NULL) +
+  ylab("time to flower (days)") +
+  theme(axis.title.y = element_text(margin = margin(r = 10)))
+
+tflow_overlay_plot
+
+
+```
+
+
+# Fig heterosis
+
+```{r}
+
+
+fig_heterosis <- ggarrange(
+  surv_overlay_plot,
+  flow_overlay_plot,
+  nflow_overlay_plot,
+  height_overlay_plot,
+  bushiness_overlay_plot,
+  tflow_overlay_plot,
+  
+  ncol = 2,
+  nrow = 3,
+  
+  labels = LETTERS[1:6],
+  
+  common.legend = TRUE,
+  
+  legend = "top"
+)
+
+fig_heterosis
+
+#ggsave(here::here("figures/fig.heterosis.png"), height = 10, width = 10)
+
+
+```
+

@@ -1,0 +1,108 @@
+---
+title: "wilting & height"
+---
+
+```{r}
+library("dplyr")
+library("DHARMa")
+library("ggplot2")
+library("tidyverse")
+library("lme4")
+```
+
+
+
+read data
+
+```{r}
+Dataset <- read.csv(here::here("dataset.csv"))
+
+# Set random effects as factors
+
+Dataset$block <- as.factor(Dataset$block)
+Dataset$cross <- as.factor(Dataset$cross)
+
+Dataset$bushiness[Dataset$bushiness==0] <- NA
+```
+
+
+Compute total wilting: we sum the wilting event to compute the total wilting for each plant
+
+```{r}
+Dataset <- Dataset %>%
+  mutate(
+    wilt1 = ifelse(wilt1 != "", 1, 0),
+    wilt2 = ifelse(wilt2 != "", 1, 0),
+    wilt3 = ifelse(wilt3 != "", 1, 0),
+    wilt4 = ifelse(wilt4 != "", 1, 0),
+    wilt5 = ifelse(wilt5 != "", 1, 0),
+    wilt6 = ifelse(wilt6 != "", 1, 0),
+    wilt7 = ifelse(wilt7 != "", 1, 0),
+    total_wilting = wilt1 + wilt2 + wilt3 + wilt4 + wilt5 + wilt6 + wilt7
+  )
+
+```
+
+
+We test the effect of wilting on height only for drought treatments
+
+```{r}
+Dataset_filtered <- Dataset[Dataset$trt != "control", ]
+```
+
+
+Apply square root transformation to the response variable (total_wilting) to avoid overdispersion
+
+```{r}
+Dataset_filtered <- Dataset_filtered %>%
+  mutate(sqrt_total_wilting = sqrt(total_wilting))
+
+lm_sqrt_wiltheight <- lm(sqrt_total_wilting ~ trt + height_cm +trt:height_cm, data = Dataset_filtered)
+```
+
+
+Model:
+
+```{r}
+lm_sqrt_wiltheight <- lm(sqrt_total_wilting ~ trt + height_cm +trt:height_cm, data = Dataset_filtered)
+
+summary(lm_sqrt_wiltheight)
+```
+
+Model inspection:
+
+```{r}
+simulationOutput_wiltheight_d<-simulateResiduals(lm_sqrt_wiltheight)
+dharma_plot_wiltheight<-plot(simulationOutput_wiltheight_d)
+wiltheight_dharma<-testResiduals(simulationOutput_wiltheight_d) 
+```
+
+Plot
+
+```{r}
+# Identify rows used in the model (rows without missing values)
+used_rows <- complete.cases(Dataset_filtered$height_cm, Dataset_filtered$total_wilting, Dataset_filtered$trt)
+
+# Create a new dataset containing only rows used in the model
+Dataset_used <- Dataset_filtered[used_rows, ]
+
+
+# Assign fitted values to Dataset_used
+Dataset_used$fitted_total_wilting <- fitted(lm_sqrt_wiltheight)^2
+
+
+# Create a scatter plot of raw data with facet wrap for treatment
+plot_wilting <- ggplot(Dataset_filtered, aes(x = height_cm, y = total_wilting)) +
+  geom_point(alpha = 0.6) +
+  theme_classic() +
+  labs(x = "Plant Height (cm)", y = "Total Wilting Events") +
+  facet_wrap(~ trt)  # Add facet wrap for each treatment
+
+# Add the fitted line back-transformed to the original scale for each treatment
+plot_wilting <- plot_wilting +
+  geom_line(data = Dataset_used, aes(x = height_cm, y = fitted_total_wilting), color = "red", size = 1)
+
+
+plot_wilting)
+```
+
