@@ -1,0 +1,114 @@
+---
+title: "Height on flowering"
+---
+
+
+```{r}
+library("glmmTMB")
+library("dplyr")
+library("DHARMa")
+library("ggplot2")
+library("ggpubr")
+library("tidyverse")
+library("lme4")
+library("emmeans")
+```
+
+Read data
+
+```{r}
+Dataset <- read.csv(here::here("dataset.csv"))
+
+# Set random effects as factors
+
+Dataset$block <- as.factor(Dataset$block)
+Dataset$cross <- as.factor(Dataset$cross)
+
+Dataset$bushiness[Dataset$bushiness==0] <- NA
+
+head(Dataset)
+```
+
+
+```{r}
+model_flow_height <- glmmTMB(flowering ~ trt + height_cm + trt:height_cm +  (1|block) +(1|cross), family = "binomial", data = Dataset)
+
+summary(model_flow_height)
+```
+
+
+```{r}
+simulationOutput_flow<-simulateResiduals(model_flow_height) 
+dharma_plot_flow<-plot(simulationOutput_flow)
+flow_dharma<-testResiduals(simulationOutput_flow)
+```
+
+```{r}
+# Ensure 'trt' is correctly included in the filtered dataset
+Dataset_used <- Dataset %>% 
+  filter(complete.cases(height_cm, flowering, block, cross, trt))
+
+# Predict fitted values for the filtered dataset
+Dataset_used$fitted_flowering <- predict(model_flow_height, newdata = Dataset_used, type = "response")
+
+# Check if 'trt' is in the dataset
+str(Dataset_used) # Verify 'trt' is present
+
+# Create the plot with the raw data and fitted model line
+plot_flow_height <- ggplot(Dataset_used, aes(x = height_cm, y = flowering, group = trt)) +
+  facet_wrap(~trt) + # Correct the facet_wrap to use formula notation
+  geom_jitter(width = 0.1, height = 0.02, alpha = 0.5, color = "blue") + # Raw data with jitter
+  geom_line(aes(y = fitted_flowering), color = "red", size = 1) + # Fitted model line
+  theme_classic() +
+  xlab("Height (cm)") +
+  ylab("Flowering Probability") +
+  theme(axis.title.y = element_text(margin = margin(r = 10)))
+
+# Display the plot
+plot_flow_height
+
+```
+
+########################
+
+
+## interaction with color
+
+```{r}
+model_flow_height <- glmmTMB(flowering ~ colors + height_cm + colors:height_cm +  (1|block) +(1|cross), family = "binomial", data = Dataset)
+
+summary(model_flow_height)
+```
+
+
+```{r}
+simulationOutput_flow<-simulateResiduals(model_flow_height) 
+dharma_plot_flow<-plot(simulationOutput_flow)
+flow_dharma<-testResiduals(simulationOutput_flow)
+```
+
+```{r}
+# Ensure 'trt' is correctly included in the filtered dataset
+Dataset_used <- Dataset %>% 
+  filter(complete.cases(height_cm, flowering, block, cross, colors))
+
+# Predict fitted values for the filtered dataset
+Dataset_used$fitted_flowering <- predict(model_flow_height, newdata = Dataset_used, type = "response")
+
+# Check if 'trt' is in the dataset
+str(Dataset_used) # Verify 'trt' is present
+
+# Create the plot with the raw data and fitted model line
+plot_flow_height <- ggplot(Dataset_used, aes(x = height_cm, y = flowering, group = colors)) +
+  facet_wrap(~colors) + # Correct the facet_wrap to use formula notation
+  geom_jitter(width = 0.1, height = 0.02, alpha = 0.5, color = "blue") + # Raw data with jitter
+  geom_line(aes(y = fitted_flowering), color = "red", size = 1) + # Fitted model line
+  theme_classic() +
+  xlab("Height (cm)") +
+  ylab("Flowering Probability") +
+  theme(axis.title.y = element_text(margin = margin(r = 10)))
+
+# Display the plot
+plot_flow_height
+```
+

@@ -103,6 +103,6 @@ plot_wilting <- plot_wilting +
   geom_line(data = Dataset_used, aes(x = height_cm, y = fitted_total_wilting), color = "red", size = 1)
 
 
-plot_wilting)
+plot_wilting
 ```
 
