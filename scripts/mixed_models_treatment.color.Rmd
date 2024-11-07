@@ -1375,7 +1375,7 @@ bushiness_overlay_plot <- bush_raw +
     size = 4
   ) +
     scale_fill_manual(values=c("#990099", "#FF6666", "gold"))+
-  scale_color_manual(values=c("#990099", "#FF6666", "gold","black"),labels = c("raw data", "pseudomajus", "F1 hybrid", "striatum"))+
+  scale_color_manual(values=c("#990099", "#FF6666", "gold","black"),labels = c("pseudomajus", "F1 hybrid", "striatum", "raw data"))+
   theme_classic()+
   my_theme+
 guides(fill = FALSE)+
@@ -1480,7 +1480,7 @@ tflow_overlay_plot <- tflow_raw +
     size = 4
   ) +
     scale_fill_manual(values=c("#990099", "#FF6666", "gold"))+
-  scale_color_manual(values=c("#990099", "#FF6666", "gold","black"),labels = c("raw data", "pseudomajus", "F1 hybrid", "striatum"))+
+  scale_color_manual(values=c("#990099", "#FF6666", "gold","black"),labels = c("pseudomajus", "F1 hybrid", "striatum", "raw data"))+
   theme_classic()+
   my_theme+
 guides(fill = FALSE)+
@@ -1546,18 +1546,24 @@ figure1 <- ggarrange(
  
    arranged_nflow_coltrt,
   
-  nrow = 3,
+  height_overlay_plot+
+    ylab("height (cm)")+
+  theme(axis.title.y = element_text(margin = margin(r = 10)))+
+   scale_x_discrete(guide = guide_axis(n.dodge=2)), 
+  
+  nrow = 4,
   ncol = 2,
   
   common.legend = TRUE,
   
-  labels = c("A", "B", "C", "", "F", "")
+  
+  labels = c("A", "B", "C", "", "F", "", "I")
   
 )
 
 figure1
 
-ggsave("../figures/figure1.png", height = 10, width = 10)
+ggsave("../figures/figure1a.png", height = 12.5, width = 10)
 
 
 ```
@@ -1599,26 +1605,25 @@ figure_2_a
 
 
 figure_2_b <- ggarrange(
-  
-    height_overlay_plot,
 
 bushiness_overlay_plot,
 
 tflow_overlay_plot,
 
-nrow = 3,
+nrow = 2,
 ncol = 1,
 
 common.legend = TRUE,
+legend = "right",
 
-labels = c("A", "B", "C")
+labels = c("A", "B")
   
 )
 
 figure_2_b
 
 
-#ggsave("../figures/figure_s1.png", height = 8, width = 5)
+ggsave("../figures/figure_s1a.png", height = 6.5, width = 8)
 
 ```
 

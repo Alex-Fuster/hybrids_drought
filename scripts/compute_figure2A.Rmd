@@ -154,20 +154,20 @@ merged_data$percent_decrease <- merged_data$percent_decrease*(-1)
 
 # Filter and rename traits
 merged_data_fitness <- merged_data %>%
-  filter(trait %in% c("survival", "flowering", "n flowers")) %>%
-  mutate(trait = factor(trait, levels = c("n flowers", "flowering","survival"),
-                        labels = c("Flower Count", "Flowering", "Survival")))
+  filter(trait %in% c("survival", "flowering", "n flowers", "height (cm)")) %>%
+  mutate(trait = factor(trait, levels = c("height (cm)", "n flowers", "flowering","survival"),
+                        labels = c("Height","Flower Count", "Flowering", "Survival")))
 
 
 # Filter and rename traits
 merged_data_other <- merged_data %>%
-  filter(trait %in% c("time to flower (days)","bushiness (n nodes)","height (cm)")) %>%
-  mutate(trait = factor(trait, levels = c("time to flower (days)","bushiness (n nodes)","height (cm)")))
+  filter(trait %in% c("time to flower (days)","bushiness (n nodes)")) %>%
+  mutate(trait = factor(trait, levels = c("time to flower (days)","bushiness (n nodes)")))
 
 
 merged_data_fitness$trait <- factor(merged_data_fitness$trait,
-  levels = c("Flower Count", "Flowering", "Survival"),
-  labels = c("flower count\n(survivors)", "flowering\n(all plants)", "survival")
+  levels = c("Height","Flower Count", "Flowering", "Survival"),
+  labels = c("Height (cm)","flower count\n(survivors)", "flowering\n(all plants)", "survival")
 )
 
 
@@ -196,7 +196,7 @@ plot_change_fitness <- ggplot(merged_data_fitness, aes(x = trait, y = percent_de
 
 plot_change_fitness
 
-#ggsave("../figures/perc.change_a.png", height = 4, width = 6.5)
+#ggsave("../figures/perc.change_a.png", height = 5, width = 6.5)
 
 
 
@@ -224,7 +224,7 @@ plot_change_others <- ggplot(merged_data_other, aes(x = trait, y = percent_decre
 
 plot_change_others
 
-#ggsave("../figures/perc.change_b.png", height = 4, width = 6.5)
+#ggsave("../figures/perc.change_b.png", height = 3, width = 6.5)
 
 
 ```

@@ -49,6 +49,24 @@ Dataset <- Dataset |>
 head(Dataset)
 ```
 
+Summarize the data for heterosis, phenotype, and parents
+
+```{r}
+summary_table <- Dataset %>%
+  group_by(heterosis, colors, pop_parent_1, pop_parent_2) %>%
+  summarise(total_individuals = n(), .groups = 'drop') %>%
+  arrange(heterosis, colors, pop_parent_1, pop_parent_2)
+
+# Display the summary table
+print(summary_table)
+
+#write.csv(summary_table, here::here("tables/df_heterosis_color_parents.csv"))
+```
+
+
+
+
+
 Create a dataset excluding control to run the survival model:
 
 ```{r}

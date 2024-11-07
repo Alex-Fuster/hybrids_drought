@@ -132,7 +132,7 @@ ggplot(death_risk_long, aes(x = flowering, y = death_risk, fill = colors, color 
   theme(strip.text = element_text(size = 12))+
   my.theme
 
-#ggsave("../figures/death_risk.png", height = 4, width = 6)
+ggsave("../figures/death_risk.png", height = 4, width = 6)
 
 
 ```
