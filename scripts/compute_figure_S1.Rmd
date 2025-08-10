@@ -31,12 +31,26 @@ sites
 
 ```{r}
 
-plot_pyr <- ggplot(data = world) +
-    geom_sf() +
-    geom_point(data = sites, aes(x = long, y = lat, group = species, color = species), size = 4) +
-    coord_sf(xlim = c(-3.17, 3.49), ylim = c(44.28, 41.10), expand = FALSE)+
-   scale_color_manual(values = c("#990099","gold"),
-                      labels = c("A. m. pseudomajus", "A. m. striatum"))
+library(dplyr)
+sites_plot <- sites %>%
+  filter(species %in% c("pseudomajus", "striatum"))
+
+plot_pyr <- ggplot(world) +
+  geom_sf() +
+  geom_point(
+    data = sites_plot,
+    aes(x = long, y = lat, color = species),
+    size = 4
+  ) +
+  coord_sf(xlim = c(-3.17, 3.49), ylim = c(41.10, 44.28), expand = FALSE) +
+  scale_color_manual(
+    name = "Varieties",
+    values = c(pseudomajus = "#990099", striatum = "gold"),
+    labels = c(pseudomajus = "A. m. var. pseudomajus", striatum = "A. m. var. striatum"),
+    breaks = c("pseudomajus", "striatum")
+  )
+
+
 
 
 plot_spain <- ggplot(data = world) +

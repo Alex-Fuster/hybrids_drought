@@ -88,26 +88,26 @@ p_l <- ggplot(wilting_counts %>% filter(trt == "late drought"), aes(x = measurem
   my.theme
 
 
+p_c <- p_c + labs(color = "morphotype")
+p_e <- p_e + labs(color = "morphotype")
+p_l <- p_l + labs(color = "morphotype")
+
 plot_wilting <- ggarrange(
   p_c,
   p_e,
   p_l,
-  
   nrow = 1,
   ncol = 3,
-  
   common.legend = TRUE,
-  
   labels = c("A", "B", "C")
 )
 
-
 plot_wilting
+
 
 #ggsave("../figures/plot_S4.png", height = 5.5, width = 13)
 
 ```
-
 
 
 

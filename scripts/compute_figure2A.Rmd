@@ -15,7 +15,7 @@ Load dataset:
 
 ```{r}
 
-dataset <- read.csv("../tables/df_emmeans.csv")
+dataset <- read.csv("../tables/df_emmeans_25jul.csv")
 
 head(dataset)
 
@@ -229,4 +229,37 @@ plot_change_others
 
 ```
 
+
+```{r}
+# Step 1: Rename percent_decrease column
+merged_data_early <- merged_data_early %>%
+  rename(percent_decrease_early_drought = percent_decrease)
+
+merged_data_late <- merged_data_late %>%
+  rename(percent_decrease_late_drought = percent_decrease)
+
+# Step 2: Merge early and late by trait and morphotype (colors)
+df_percent_morph <- full_join(
+  merged_data_early,
+  merged_data_late,
+  by = c("trait", "colors")
+)
+
+# Step 3: Summarise across morphotypes
+df_summary <- df_percent_morph %>%
+  group_by(trait) %>%
+  summarise(
+    mean_early = mean(percent_decrease_early_drought, na.rm = TRUE),
+    min_early = min(percent_decrease_early_drought, na.rm = TRUE),
+    max_early = max(percent_decrease_early_drought, na.rm = TRUE),
+    mean_late = mean(percent_decrease_late_drought, na.rm = TRUE),
+    min_late = min(percent_decrease_late_drought, na.rm = TRUE),
+    max_late = max(percent_decrease_late_drought, na.rm = TRUE)
+  )
+
+df_summary
+
+write.csv(df_summary, here::here("tables/summary_percent_change_treatments.csv"))
+write.csv(df_percent_morph, here::here("tables/df_percent_morph.csv"))
+```
 

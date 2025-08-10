@@ -1,0 +1,52 @@
+trait,colors,trt,estimated response,SE,df,n,CI,comp
+survival,M_M,early drought,0.85,0.09,Inf,18, 0.58- 0.96,  b
+survival,M_Y,early drought,0.68,0.13,Inf,18, 0.40- 0.87, ab
+survival,Y_Y,early drought,0.67,0.13,Inf,18, 0.39- 0.87, ab
+survival,M_M,late drought,0.63,0.13,Inf,18, 0.36- 0.84, ab
+survival,M_Y,late drought,0.14,0.09,Inf,18, 0.04- 0.42, a 
+survival,Y_Y,late drought,0.78,0.11,Inf,18, 0.50- 0.92,  b
+flowering,M_M,control,0.63,0.14,Inf,18, 0.35- 0.85, ab
+flowering,M_Y,control,0.91,0.07,Inf,18, 0.65- 0.98,  b
+flowering,Y_Y,control,0.5,0.15,Inf,18, 0.24- 0.77, ab
+flowering,M_M,early drought,0.1,0.07,Inf,18, 0.02- 0.36, a 
+flowering,M_Y,early drought,0.44,0.15,Inf,18, 0.20- 0.72, ab
+flowering,Y_Y,early drought,0.13,0.09,Inf,18, 0.03- 0.41, a 
+flowering,M_M,late drought,0.25,0.12,Inf,18, 0.08- 0.54, a 
+flowering,M_Y,late drought,0.69,0.13,Inf,18, 0.40- 0.88, ab
+flowering,Y_Y,late drought,0.3,0.13,Inf,18, 0.11- 0.60, ab
+n flowers,M_M,control,3.78,1.30,Inf,18, 1.92- 7.43,  bc
+n flowers,M_Y,control,6.17,2.08,Inf,18, 3.19-11.93,   c
+n flowers,Y_Y,control,3,1.05,Inf,18, 1.51- 5.96,  bc
+n flowers,M_M,early drought,0.07,0.07,Inf,15, 0.01- 0.53, a  
+n flowers,M_Y,early drought,1.17,0.56,Inf,12, 0.46- 2.97, abc
+n flowers,Y_Y,early drought,0.31,0.19,Inf,13, 0.09- 1.05, a  
+n flowers,M_M,late drought,0.55,0.32,Inf,11, 0.17- 1.70, ab 
+n flowers,M_Y,late drought,0,0.00,Inf,3, 0.00- 0.00, abc
+n flowers,Y_Y,late drought,0.86,0.40,Inf,14, 0.34- 2.14, ab 
+height (cm),M_M,early drought,15.35,4.31,37.54,15, 6.62-24.09, a   
+height (cm),M_Y,early drought,18.68,4.66,46.56,12, 9.30-28.06, a   
+height (cm),Y_Y,early drought,21.19,4.70,38.56,13,11.69-30.70, a   
+height (cm),M_Y,late drought,22.49,8.09,110.04,3, 6.46-38.52, abc 
+height (cm),M_M,late drought,25.68,4.71,57.96,11,16.25-35.11, ab  
+height (cm),Y_Y,late drought,28.54,4.35,46.19,14,19.78-37.30, ab  
+height (cm),Y_Y,control,40.64,3.98,35.65,18,32.56-48.72,  bc 
+height (cm),M_M,control,47,3.92,35.96,18,39.05-54.95,   c 
+height (cm),M_Y,control,67.34,3.92,35.81,18,59.38-75.30,    d
+bushiness (n nodes),M_M,control,32.1,4.89,Inf,17,23.82-43.26,   cd
+bushiness (n nodes),M_Y,control,22.82,3.50,Inf,18,16.89-30.81,  bcd
+bushiness (n nodes),Y_Y,control,40.5,6.12,Inf,18,30.11-54.45,    d
+bushiness (n nodes),M_M,early drought,16.69,2.94,Inf,15,11.82-23.58, ab  
+bushiness (n nodes),M_Y,early drought,12.36,2.28,Inf,12, 8.61-17.74, a   
+bushiness (n nodes),Y_Y,early drought,20.84,3.74,Inf,13,14.66-29.63, abc 
+bushiness (n nodes),M_M,late drought,22.12,3.61,Inf,10,16.07-30.46, ab  
+bushiness (n nodes),M_Y,late drought,25,4.86,Inf,3,17.08-36.59,  bcd
+bushiness (n nodes),Y_Y,late drought,25.48,3.99,Inf,14,18.74-34.64, abc 
+time to flower (days),M_M,control,58,2.39,Inf,11,53.49-62.88,  bc
+time to flower (days),M_Y,control,53.62,1.90,Inf,16,50.02-57.49, ab 
+time to flower (days),Y_Y,control,55.89,2.59,Inf,9,51.03-61.21,  b 
+time to flower (days),M_M,early drought,77,6.55,Inf,2,65.18-90.97,   c
+time to flower (days),M_Y,early drought,47.12,2.51,Inf,8,42.45-52.31, ab 
+time to flower (days),Y_Y,early drought,52,4.32,Inf,3,44.19-61.20, ab 
+time to flower (days),M_M,late drought,47.6,3.19,Inf,5,41.74-54.29, ab 
+time to flower (days),M_Y,late drought,45.42,2.01,Inf,12,41.64-49.53, a  
+time to flower (days),Y_Y,late drought,52,3.06,Inf,6,46.34-58.35, ab 

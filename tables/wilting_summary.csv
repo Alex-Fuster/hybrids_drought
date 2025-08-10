@@ -1,0 +1,10 @@
+"","trt","colors","total_wilting","first_week_wilting"
+"1","control","M_M",13,5
+"2","control","M_Y",17,5
+"3","control","Y_Y",9,5
+"4","early drought","M_M",46,2
+"5","early drought","M_Y",50,2
+"6","early drought","Y_Y",44,2
+"7","late drought","M_M",18,5
+"8","late drought","M_Y",21,1
+"9","late drought","Y_Y",19,3

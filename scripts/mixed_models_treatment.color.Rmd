@@ -238,7 +238,7 @@ df_anovas$"Chisq"<- round(df_anovas$"Chisq", 2)
 
 df_anovas
 
-#write.csv(df_anovas, "../tables/df_anovas_traits.csv")
+#write.csv(df_anovas, "../tables/df_anovas_traits_delete.csv")
 
 ```
 
@@ -300,9 +300,9 @@ surv_emmeans_cld <- surv_emmeans_cld %>%
   dplyr::select(trt, .group, colors)
 
 
-back.emmeans_surv <- left_join(back.emmeans_surv, surv_emmeans_cld, by = c("trt","colors"))
+back.emmeans_surv_all <- left_join(back.emmeans_surv, surv_emmeans_cld, by = c("trt","colors"))
 
-back.emmeans_surv
+back.emmeans_surv_all
 
 ```
 
@@ -393,6 +393,23 @@ surv_overlay_plot <- surv_raw +
 
 surv_overlay_plot
 
+# First, ensure you're using the joined data frame with .group letters
+back.emmeans_surv_all$label_y <- back.emmeans_surv_all$asymp.UCL + 0.05  # Small vertical offset
+
+# Add this to your plot
+surv_overlay_plot <- surv_overlay_plot +
+  geom_text(
+    data = back.emmeans_surv_all,
+    aes(
+      x = trt,
+      y = label_y,
+      label = .group,
+      color = colors
+    ),
+    position = position_dodge(width = 0.6),
+    vjust = 0,
+    size = 4
+  )
 
 
 
@@ -522,6 +539,7 @@ surv_overlay_plot2
 
 
 
+
 ```
 
 
@@ -552,9 +570,9 @@ flow_emmeans_cld <- flow_emmeans_cld %>%
   dplyr::select(.group, colors, trt)
 
 
-back.emmeans_flowering <- left_join(back.emmeans_flowering, flow_emmeans_cld, by = c("trt", "colors"))
+back.emmeans_flowering_all <- left_join(back.emmeans_flowering, flow_emmeans_cld, by = c("trt", "colors"))
 
-back.emmeans_flowering
+back.emmeans_flowering_all
 
 ```
 
@@ -907,9 +925,9 @@ nflow_emmeans_cld <- nflow_emmeans_cld %>%
   dplyr::select(.group, colors, trt)
 
 
-back.emmeans_nflow <- left_join(back.emmeans_nflow, nflow_emmeans_cld, by = c("trt", "colors"))
+back.emmeans_nflow_all <- left_join(back.emmeans_nflow, nflow_emmeans_cld, by = c("trt", "colors"))
 
-back.emmeans_nflow
+back.emmeans_nflow_all
 
 ```
 
@@ -1508,7 +1526,7 @@ arranged_flowering_coltrt <- ggarrange(
   ncol = 2,
   nrow = 1,
   
-  labels = c("D", "E")
+  labels = c("C", "D")
 )
 
 
@@ -1519,51 +1537,55 @@ arranged_nflow_coltrt <- ggarrange(
   ncol = 2,
   nrow = 1,
   
-  labels = c("G", "H")
+  labels = c("F", "G")
 )
 
 
 
+
+
+# Define spacer for empty cells
+white_spacer <- ggplot() + theme_void() + theme(plot.background = element_rect(fill = "white", color = NA))
+
+# Rebuild the layout
 figure1 <- ggarrange(
   
+  # First row: survival plot on left, empty on right
   surv_overlay_plot +
-  theme(axis.title.y = element_text(margin = margin(r = 10)))+
-   scale_x_discrete(guide = guide_axis(n.dodge=2)), 
+    theme(axis.title.y = element_text(margin = margin(r = 10))) +
+    scale_x_discrete(guide = guide_axis(n.dodge = 2))+
+  labs(color = "Morphotype"),
+  white_spacer,
   
-  surv_overlay_plot2 + ylab(NULL) + plot_spacer(),
-  
-  flow_overlay_plot+
-    ylab("flowering prob.(all plants)")+
-  theme(axis.title.y = element_text(margin = margin(r = 10)))+
-   scale_x_discrete(guide = guide_axis(n.dodge=2)), 
-  
+  # Second row: flowering prob plots
+  flow_overlay_plot +
+    ylab("flowering prob. (all plants)") +
+    theme(axis.title.y = element_text(margin = margin(r = 10))) +
+    scale_x_discrete(guide = guide_axis(n.dodge = 2)),
   arranged_flowering_coltrt,
   
-  nflow_overlay_plot+
-    ylab("flower count (survivors)")+
-  theme(axis.title.y = element_text(margin = margin(r = 10)))+
-   scale_x_discrete(guide = guide_axis(n.dodge=2)), 
- 
-   arranged_nflow_coltrt,
+  # Third row: flower count plots
+  nflow_overlay_plot +
+    ylab("flower count (survivors)") +
+    theme(axis.title.y = element_text(margin = margin(r = 10))) +
+    scale_x_discrete(guide = guide_axis(n.dodge = 2)),
+  arranged_nflow_coltrt,
   
-  height_overlay_plot+
-    ylab("height (cm)")+
-  theme(axis.title.y = element_text(margin = margin(r = 10)))+
-   scale_x_discrete(guide = guide_axis(n.dodge=2)), 
+  # Fourth row: height plot on left, empty on right
+  height_overlay_plot +
+    ylab("height (cm)") +
+    theme(axis.title.y = element_text(margin = margin(r = 10))) +
+    scale_x_discrete(guide = guide_axis(n.dodge = 2)),
+  white_spacer,
   
   nrow = 4,
   ncol = 2,
-  
   common.legend = TRUE,
-  
-  
-  labels = c("A", "B", "C", "", "F", "", "I")
-  
+  labels = c("A", "", "B", "", "E", "", "H", "")
 )
 
-figure1
-
-ggsave("../figures/figure1a.png", height = 12.5, width = 10)
+# Save the figure
+#ggsave("../figures/figure1a_01aug.png", figure1, height = 12.5, width = 10)
 
 
 ```
@@ -1604,26 +1626,28 @@ figure_2_a
 ```{r}
 
 
+# Update legend title in both plots
+bushiness_overlay_plot <- bushiness_overlay_plot +
+  labs(color = "morphotype", fill = "morphotype")  # depending on your legend mapping
+
+tflow_overlay_plot <- tflow_overlay_plot +
+  labs(color = "morphotype", fill = "morphotype")
+
+# Combine with ggarrange
 figure_2_b <- ggarrange(
-
-bushiness_overlay_plot,
-
-tflow_overlay_plot,
-
-nrow = 2,
-ncol = 1,
-
-common.legend = TRUE,
-legend = "right",
-
-labels = c("A", "B")
-  
+  bushiness_overlay_plot,
+  tflow_overlay_plot,
+  nrow = 2,
+  ncol = 1,
+  common.legend = TRUE,
+  legend = "right",
+  labels = c("A", "B")
 )
 
 figure_2_b
 
 
-ggsave("../figures/figure_s1a.png", height = 6.5, width = 8)
+#ggsave("../figures/figure_s1a.png", height = 6.5, width = 8)
 
 ```
 
@@ -1639,15 +1663,15 @@ options(scipen = 999)
 colmnames_anova <- c("colors", "trt", "estimated response", "SE", "df", "n",
                      "lower CI", "upper CI", "comp" ,"trait")
 
-df_anova_surv <- as.data.frame(back.emmeans_surv)
+df_anova_surv <- as.data.frame(back.emmeans_surv_all)
 df_anova_surv$trait <- rep("survival", nrow(df_anova_surv))
 colnames(df_anova_surv) = colmnames_anova
 
-df_anova_flow <- as.data.frame(back.emmeans_flowering)
+df_anova_flow <- as.data.frame(back.emmeans_flowering_all)
 df_anova_flow$trait <- rep("flowering", nrow(df_anova_flow))
 colnames(df_anova_flow) = colmnames_anova
 
-df_anova_nflow <- as.data.frame(back.emmeans_nflow)
+df_anova_nflow <- as.data.frame(back.emmeans_nflow_all)
 df_anova_nflow$trait <- rep("n flowers", nrow(df_anova_nflow))
 colnames(df_anova_nflow) = colmnames_anova
  
@@ -1670,27 +1694,460 @@ df_anovas <- do.call("rbind", list(df_anova_surv,
                       df_anova_bush,
                       df_anova_tflow))
 
-df_anovas$`estimated response` <- round(df_anovas$`estimated response`, 2)
-df_anovas$`lower CI` <- round(df_anovas$`lower CI`, 2)
-df_anovas$`upper CI` <- round(df_anovas$`upper CI`, 2)
+df_anovas_clean <- do.call("rbind", lapply(
+  list(
+    df_anova_surv, 
+    df_anova_flow, 
+    df_anova_nflow,
+    df_anova_height,
+    df_anova_bush,
+    df_anova_tflow
+  ), 
+  function(x) {
+    x_clean <- as.data.frame(x)
+    class(x_clean) <- "data.frame"  # Remove "summary_emm"
+    x_clean
+  }
+))
 
-df_anovas
 
-#write.csv(df_anovas, "../tables/df_emmeans.csv")
+df_anovas_clean$`estimated response` <- round(df_anovas$`estimated response`, 2)
+df_anovas_clean$`lower CI` <- round(df_anovas$`lower CI`, 2)
+df_anovas_clean$`upper CI` <- round(df_anovas$`upper CI`, 2)
+
+df_anovas_clean
+
+df_anovas_clean$CI <- paste0(
+  format(round(df_anovas_clean$`lower CI`, 2), nsmall = 2), "-",
+  format(round(df_anovas_clean$`upper CI`, 2), nsmall = 2)
+)
+
+```
+
+
+
+## summaries
+
+
+###############
+time to flower drought-control
+
+```{r}
+
+# Filter for time to flower and extract estimates by treatment and color
+df_flowering_time <- df_anovas_clean %>%
+  filter(trait == "time to flower (days)")
+
+# Compute average time to flower across morphotypes per treatment
+avg_time_by_trt <- df_flowering_time %>%
+  group_by(trt) %>%
+  summarise(mean_time = mean(`estimated response`))
+
+# View raw differences in days compared to control
+control_time <- avg_time_by_trt %>% filter(trt == "control") %>% pull(mean_time)
+
+avg_time_by_trt <- avg_time_by_trt %>%
+  mutate(diff_vs_control = mean_time - control_time)
+
+avg_time_by_trt
+
+```
+time to flower, which was delayed by 2.9 days under early drought and accelerated by 7.5 days under late drought, relative to control conditions
+
+
+
+###################
+n flowers
+
+```{r}
+library(dplyr)
+
+# Filter the data for the "n flowers" trait
+df_flowers <- df_anovas_clean %>%
+  filter(trait == "n flowers") %>%
+  group_by(trt) %>%
+  summarise(mean_n_flowers = mean(`estimated response`))
+
+# Calculate difference from control
+df_flowers <- df_flowers %>%
+  mutate(diff_vs_control = mean_n_flowers - mean_n_flowers[trt == "control"])
+
+df_flowers
+
+```
+
+Flower production declined sharply in drought treatments, with plants producing on average 3.8 fewer flowers under early drought and 3.85 fewer under late drought compared to control conditions
+
+
+################
+survival
+
+```{r}
+# Calculate mean survival for early and late drought
+df_survival <- df_anovas_clean %>%
+  filter(trait == "survival") %>%
+  group_by(trt) %>%
+  summarise(
+    mean_survival = mean(`estimated response`, na.rm = TRUE)
+  ) %>%
+  mutate(
+    control_survival = 1,
+    diff_vs_control = mean_survival - control_survival
+  )
+
+df_survival
+
+```
+
+Compared to the control condition (survival probability = 1.0), survival declined by 0.27 under early drought and by 0.48 under late drought
+
+###############
+flowerin drought vs control
+
+```{r}
+
+# Filter flowering data
+df_flowering <- df_anovas_clean %>%
+  filter(trait == "flowering") %>%
+  select(trt, estimated_response = `estimated response`)
+
+# Calculate mean flowering probability by treatment
+df_flowering_summary <- df_flowering %>%
+  group_by(trt) %>%
+  summarise(mean_flowering = mean(estimated_response)) %>%
+  mutate(
+    control_flowering = mean_flowering[trt == "control"],
+    diff_vs_control = mean_flowering - control_flowering
+  )
+
+df_flowering_summary
+
+
+```
+Relative to the control (0.68), flowering probability declined by 0.46 under early drought and by 0.27 under late drought
+
+################
+survival hybrids compared to magenta and yellow
+
+```{r}
+
+library(dplyr)
+
+# Filter only survival trait under early drought
+diff_early_MM <- df_anovas_clean %>%
+  filter(trait == "survival", trt == "early drought", colors %in% c("M_M", "M_Y")) %>%
+  select(colors, `estimated response`) %>%
+  tidyr::pivot_wider(names_from = colors, values_from = `estimated response`) %>%
+  mutate(diff_vs_MM = M_Y - M_M)
+
+# View result
+diff_early_MM
+
+
+
+```
+
+```{r}
+
+# Filter survival data under late drought for all morphotypes
+diff_late_avg_parents <- df_anovas_clean %>%
+  filter(trait == "survival", trt == "late drought", colors %in% c("M_M", "M_Y", "Y_Y")) %>%
+  select(colors, `estimated response`) %>%
+  pivot_wider(names_from = colors, values_from = `estimated response`) %>%
+  mutate(
+    avg_parents = (M_M + Y_Y) / 2,
+    diff_vs_avg_parents = M_Y - avg_parents
+  )
+
+# View result
+diff_late_avg_parents
+
+```
+
+
+
+##############
+flowering hybrids compared to magenta and yellow
+
+```{r}
+library(dplyr)
+
+# Filter to flowering data
+df_flowering <- df_anovas_clean %>%
+  filter(trait == "flowering")
+
+# Pivot wider to compare morphotypes side by side
+df_flowering_wide <- df_flowering %>%
+  select(trt, colors, `estimated response`) %>%
+  tidyr::pivot_wider(names_from = colors, values_from = `estimated response`) %>%
+  rename(
+    early_drought = trt
+  )
+
+# Calculate absolute differences in flowering probability
+df_flowering_diffs <- df_flowering_wide %>%
+  mutate(
+    diff_vs_MM = M_Y - M_M,
+    diff_vs_YY = M_Y - Y_Y
+  )
+
+# Optional: calculate mean difference across treatments
+df_flowering_summary <- df_flowering_diffs %>%
+  summarise(
+    mean_diff_vs_MM = mean(diff_vs_MM, na.rm = TRUE),
+    mean_diff_vs_YY = mean(diff_vs_YY, na.rm = TRUE)
+  )
+
+# View results
+print(df_flowering_diffs)
+print(df_flowering_summary)
+
+```
+
+
+##############
+Reduction flowering prob from control to drought
+
+```{r}
+
+library(dplyr)
+library(tidyr)
+
+# Filter for the flowering trait
+df_flowering <- df_anovas_clean %>%
+  filter(trait == "flowering") %>%
+  select(trt, colors, `estimated response`)
+
+# Reshape to wide format
+df_flowering_wide <- df_flowering %>%
+  pivot_wider(names_from = trt, values_from = `estimated response`) %>%
+  rename(
+    early = `early drought`,
+    late = `late drought`,
+    control = control
+  )
+
+# Calculate raw differences in flowering probability
+df_flowering_diff <- df_flowering_wide %>%
+  mutate(
+    diff_early = control - early,
+    diff_late = control - late
+  )
+
+# Compute average reduction across morphotypes
+df_flowering_summary <- df_flowering_diff %>%
+  summarise(
+    mean_diff_early = mean(diff_early, na.rm = TRUE),
+    mean_diff_late = mean(diff_late, na.rm = TRUE)
+  )
+
+# Output the data
+print(df_flowering_diff)
+print(df_flowering_summary)
+
+
+
+```
+################
+nflowers hybrids compared to parental in control and early drought
+
+```{r}
+library(dplyr)
+
+# Filter only the relevant rows: trait == "n flowers" and trt in control or early drought
+df_flowers <- df_anovas_clean %>%
+  filter(trait == "n flowers", trt %in% c("control", "early drought")) %>%
+  select(trt, colors, `estimated response`) %>%
+  pivot_wider(names_from = colors, values_from = `estimated response`) %>%
+  mutate(
+    parental_avg = (M_M + Y_Y) / 2,
+    hybrid_diff = M_Y - parental_avg
+  )
+
+# Print the result
+df_flowers
+
+```
+
+###################
+height  hybrids
+
+```{r}
+# Filter data for the trait "height (cm)"
+df_height <- df_anovas_clean %>% 
+  filter(trait == "height (cm)") %>%
+  select(trt, colors, `estimated response`) %>%
+  rename(response = `estimated response`)
+
+# Spread the data to wide format for comparison
+df_height_wide <- df_height %>%
+  tidyr::pivot_wider(names_from = colors, values_from = response) %>%
+  rename(M_M = `M_M`, M_Y = `M_Y`, Y_Y = `Y_Y`)
+
+# Compare hybrid vs parental under control
+df_height_wide <- df_height_wide %>%
+  mutate(
+    parental_avg = (M_M + Y_Y) / 2,
+    hybrid_diff_vs_parental = M_Y - parental_avg
+  )
+
+# Compute drop in height from control to each drought treatment, per morphotype
+df_height_drop <- df_height_wide %>%
+  arrange(match(trt, c("control", "early drought", "late drought"))) %>%
+  mutate(
+    drop_M_M = M_M - M_M[trt == "control"],
+    drop_M_Y = M_Y - M_Y[trt == "control"],
+    drop_Y_Y = Y_Y - Y_Y[trt == "control"]
+  )
+
+# Show results
+df_height_drop
+```
+
+```{r}
+# Filter for "height (cm)" under control conditions
+df_control_height <- df_anovas_clean %>%
+  filter(trait == "height (cm)", trt == "control") %>%
+  select(colors, `estimated response`) %>%
+  rename(height = `estimated response`)
+
+# Extract height values
+height_MM <- df_control_height %>% filter(colors == "M_M") %>% pull(height)
+height_MY <- df_control_height %>% filter(colors == "M_Y") %>% pull(height)
+height_YY <- df_control_height %>% filter(colors == "Y_Y") %>% pull(height)
+
+# Calculate differences
+diff_vs_MM <- height_MY - height_MM
+diff_vs_YY <- height_MY - height_YY
+diff_vs_avg_parental <- height_MY - mean(c(height_MM, height_YY))
+
+# Print results
+cat("Hybrids were", round(diff_vs_MM, 2), "cm taller than M_M\n")
+cat("Hybrids were", round(diff_vs_YY, 2), "cm taller than Y_Y\n")
+cat("Hybrids were", round(diff_vs_avg_parental, 2), "cm taller than the average of both parentals\n")
+```
+
+
+
+#################
+
+flowering time magentas
+
+```{r}
+
+# Subset to magenta morphotype and time to flower
+df_mm <- df_anovas_clean %>%
+  filter(colors == "M_M", trait == "time to flower (days)") %>%
+  select(trt, estimated_response = `estimated response`)
+
+# Pivot to wide format by treatment
+df_mm_wide <- df_mm %>%
+  pivot_wider(names_from = trt, values_from = estimated_response)
+
+# Calculate difference in days: early drought - control
+diff_early_vs_control <- df_mm_wide$`early drought` - df_mm_wide$control
+
+# Print the result
+diff_early_vs_control
 
 
 ```
 
 
 
+##################
+
+```{r}
+
+# Define missing rows manually
+df_survival_control <- data.frame(
+  colors = factor(c("M_M", "M_Y", "Y_Y"), levels = levels(df_anovas_clean$colors)),
+  trt = factor("control", levels = levels(df_anovas_clean$trt)),
+  `estimated response` = 1,
+  SE = NA,
+  df = Inf,
+  n = 18,
+  "lower CI" = NA,
+  "upper CI" = NA,
+  comp = NA,
+  trait = "survival",
+  CI = "1-1"
+)
+
+# Fix column names to match df_anovas_clean
+colnames(df_survival_control) <- colnames(df_anovas_clean)
+
+
+# Add to original dataframe
+df_anovas_filled <- bind_rows(df_anovas_clean, df_survival_control)
+
+
+# Step 1: Average estimated values across morphotypes, per trait and treatment
+df_trait_means <- df_anovas_filled %>%
+  group_by(trait, trt) %>%
+  summarise(mean_est = mean(`estimated response`, na.rm = TRUE), .groups = "drop")
+
+# Step 2: Pivot to wide format (1 row per trait)
+df_wide <- df_trait_means %>%
+  pivot_wider(names_from = trt, values_from = mean_est)
+
+# Step 3: Calculate % decrease from control
+df_effects <- df_wide %>%
+  mutate(
+    early_drought_pct_decrease = round((control - `early drought`) / control * 100, 1),
+    late_drought_pct_decrease  = round((control - `late drought`) / control * 100, 1)
+  )
+
+# Step 4: Print the result
+print(df_effects)
+
+```
 
 
 
+```{r}
+# All traits included now
+overall_summary <- df_effects %>%
+  summarise(
+    mean_early = round(mean(early_drought_pct_decrease, na.rm = TRUE), 1),
+    min_early  = round(min(early_drought_pct_decrease, na.rm = TRUE), 1),
+    max_early  = round(max(early_drought_pct_decrease, na.rm = TRUE), 1),
+    mean_late  = round(mean(late_drought_pct_decrease, na.rm = TRUE), 1),
+    min_late   = round(min(late_drought_pct_decrease, na.rm = TRUE), 1),
+    max_late   = round(max(late_drought_pct_decrease, na.rm = TRUE), 1)
+  )
+
+print(overall_summary)
+
+```
+
+Drought treatments affected all measured phenotypic traits, with an average reduction of 48.1% under early drought (range: –5.1% to 88.0%) and 44.1% under late drought (range: 13.4% to 89.1%; Table 1, S3, S4; Figure 2, S2). 
 
 
 
+## % difference in flowering
 
+```{r}
+# Filter to flowering trait only
+df_flowering <- df_anovas_clean %>%
+  filter(trait == "flowering")
 
+# Reshape the data to have one row per (treatment, morphotype) pair
+df_wide <- df_flowering %>%
+  select(trt, colors, flowering_prob = `estimated.response`) %>%
+  filter(colors %in% c("M_M", "M_Y", "Y_Y")) %>%
+  tidyr::pivot_wider(names_from = colors, values_from = flowering_prob)
+
+# Calculate percent increase of hybrid compared to each parental morph
+df_wide <- df_wide %>%
+  mutate(
+    pct_increase_vs_MM = ((M_Y - M_M) / M_M) * 100,
+    pct_increase_vs_YY = ((M_Y - Y_Y) / Y_Y) * 100
+  )
+
+# View results
+print(df_wide)
+```
 
 
 

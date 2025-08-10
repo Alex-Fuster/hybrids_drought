@@ -138,6 +138,20 @@ ggsave("../figures/death_risk.png", height = 4, width = 6)
 ```
 
 
+```{r}
+# Filter the dataframe for hybrids (M_Y) under late drought
+df_subset <- df_risk_death %>%
+  filter(trt == "late drought", colors == "M_Y")
+
+# Extract the death risks
+risk_flowering <- df_subset$death_risk_flowering
+risk_non_flowering <- df_subset$death_risk_non_flowering
+
+# Compute the risk ratio
+risk_ratio <- risk_flowering / risk_non_flowering
+risk_ratio
+
+```
 
 
 
